@@ -3,10 +3,16 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
+	"net/http"
 	"os"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
+
+	"enqueue/internal/database"
+	"enqueue/internal/handlers"
+	"enqueue/internal/services"
 )
 
 func main() {
@@ -14,19 +20,21 @@ func main() {
 	if err := godotenv.Load(); err != nil {
 		fmt.Fprint(os.Stderr, ".env not found", err)
 	}
-
-	dbpool, err := pgxpool.New(context.Background(), os.Getenv("DATABASE_URL"))
+	// connect to db
+	pool, err := pgxpool.New(context.Background(), os.Getenv("DATABASE_URL"))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to create connection pool: %v\n", err)
 		os.Exit(1)
 	}
-	defer dbpool.Close()
+	defer pool.Close()
 
-	var greeting string
-	err = dbpool.QueryRow(context.Background(), "select 'Hello, world!'").Scan(&greeting)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
-		os.Exit(1)
-	}
-	fmt.Println(greeting)
+	queries := database.New(pool)
+	userService := services.NewUserService(queries)
+	usersHandler := handlers.NewUsersHandler(userService)
+
+	mux := http.NewServeMux()
+	handlers.RegisterUserRoutes(mux, usersHandler)
+
+	log.Println("listening on :8080")
+	log.Fatal(http.ListenAndServe(":8080", mux))
 }
