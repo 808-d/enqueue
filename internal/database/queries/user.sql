@@ -12,9 +12,11 @@ RETURNING *;
 
 -- name: UpdateUser :one
 UPDATE users
-SET email = $2,
-avatar = $3,
-password = $4,
+SET 
+username = $2,
+email = $3,
+avatar = $4,
+password = $5,
 update_time = now()
 WHERE id = $1 AND is_delete = false
 RETURNING *;

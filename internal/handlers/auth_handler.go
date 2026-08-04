@@ -47,6 +47,6 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		"message": "Login successful",
 	})
 }
-func (h *AuthHandler) Register() {
+func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 }

@@ -133,9 +133,11 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 
 const updateUser = `-- name: UpdateUser :one
 UPDATE users
-SET email = $2,
-avatar = $3,
-password = $4,
+SET 
+username = $2,
+email = $3,
+avatar = $4,
+password = $5,
 update_time = now()
 WHERE id = $1 AND is_delete = false
 RETURNING is_delete, create_time, update_time, id, username, email, avatar, password, role
@@ -143,6 +145,7 @@ RETURNING is_delete, create_time, update_time, id, username, email, avatar, pass
 
 type UpdateUserParams struct {
 	ID       pgtype.UUID
+	Username string
 	Email    string
 	Avatar   pgtype.Text
 	Password pgtype.Text
@@ -151,6 +154,7 @@ type UpdateUserParams struct {
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
 	row := q.db.QueryRow(ctx, updateUser,
 		arg.ID,
+		arg.Username,
 		arg.Email,
 		arg.Avatar,
 		arg.Password,
