@@ -81,7 +81,6 @@ func (h *UsersHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
-
 	err := h.userService.DeleteUser(
 		r.Context(),
 		req,

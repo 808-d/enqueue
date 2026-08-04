@@ -34,6 +34,7 @@ func main() {
 
 	authService := services.NewAuthService(queries)
 	authHandler := handlers.NewAuthHandler(authService)
+
 	mux := http.NewServeMux()
 	handlers.RegisterUserRoutes(mux, usersHandler)
 	handlers.RegisterAuthRoutes(mux, authHandler)
