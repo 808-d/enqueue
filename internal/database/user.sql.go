@@ -12,7 +12,7 @@ import (
 )
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO public."users"
+INSERT INTO users
 (id, username, email, avatar, password, role, is_delete, create_time, update_time)
 VALUES (gen_random_uuid(), $1, $2, $3, $4, 'user', false, now(), now())
 RETURNING is_delete, create_time, update_time, id, username, email, avatar, password, role
@@ -48,7 +48,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 }
 
 const deleteUser = `-- name: DeleteUser :exec
-UPDATE public."users"
+UPDATE users
 SET is_delete = true,
 update_time = now()
 WHERE id = $1
@@ -60,7 +60,7 @@ func (q *Queries) DeleteUser(ctx context.Context, id pgtype.UUID) error {
 }
 
 const getUser = `-- name: GetUser :one
-SELECT is_delete, create_time, update_time, id, username, email, avatar, password, role FROM public."users" WHERE id = $1 LIMIT 1
+SELECT is_delete, create_time, update_time, id, username, email, avatar, password, role FROM users WHERE id = $1 AND is_delete = false LIMIT 1
 `
 
 func (q *Queries) GetUser(ctx context.Context, id pgtype.UUID) (User, error) {
@@ -80,8 +80,25 @@ func (q *Queries) GetUser(ctx context.Context, id pgtype.UUID) (User, error) {
 	return i, err
 }
 
+const getUserByUsernameAndPassword = `-- name: GetUserByUsernameAndPassword :one
+SELECT EXISTS (SELECT 1 FROM users
+  WHERE username = $1 AND password = $2 AND is_delete = false)
+`
+
+type GetUserByUsernameAndPasswordParams struct {
+	Username string
+	Password pgtype.Text
+}
+
+func (q *Queries) GetUserByUsernameAndPassword(ctx context.Context, arg GetUserByUsernameAndPasswordParams) (bool, error) {
+	row := q.db.QueryRow(ctx, getUserByUsernameAndPassword, arg.Username, arg.Password)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const listUsers = `-- name: ListUsers :many
-SELECT is_delete, create_time, update_time, id, username, email, avatar, password, role FROM public."users" WHERE is_delete = false ORDER BY id
+SELECT is_delete, create_time, update_time, id, username, email, avatar, password, role FROM users WHERE is_delete = false and role <> 'user' ORDER BY id
 `
 
 func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
@@ -115,7 +132,7 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 }
 
 const updateUser = `-- name: UpdateUser :one
-UPDATE public."users"
+UPDATE users
 SET email = $2,
 avatar = $3,
 password = $4,
