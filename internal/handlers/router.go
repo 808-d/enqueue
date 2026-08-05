@@ -8,6 +8,12 @@ func RegisterUserRoutes(mux *http.ServeMux, h *UsersHandler) {
 	mux.HandleFunc("PUT /users", h.UpdateUser)
 	mux.HandleFunc("DELETE /users", h.DeleteUser)
 }
+func RegisterPostRoutes(mux *http.ServeMux, h *PostsHandler) {
+	mux.HandleFunc("GET /posts", h.GetPosts)
+	mux.HandleFunc("POST /posts", h.CreatePost)
+	mux.HandleFunc("PUT /posts", h.UpdatePost)
+	mux.HandleFunc("DELETE /posts", h.DeletePost)
+}
 
 func RegisterAuthRoutes(mux *http.ServeMux, h *AuthHandler) {
 	mux.HandleFunc("POST /login", h.Login)

@@ -4,12 +4,21 @@ import (
 	"context"
 	"enqueue/internal/database"
 	"errors"
+	"os"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type AuthService struct {
 	userRepo *database.Queries
+}
+
+type Claims struct {
+	UserID   int    `json:"user_id"`
+	Username string `json:"username"`
+	Role     string `json:"role"`
+	jwt.RegisteredClaims
 }
 
 func NewAuthService(userRepo *database.Queries) *AuthService {
@@ -40,4 +49,11 @@ func (s *AuthService) GetUserByUsernameAndPassword(
 	}
 
 	return false, errors.New("")
+}
+
+func GenerateToken(username string) (string, error) {
+	key := os.Getenv("JWT_SECRET")
+	t := jwt.New(jwt.SigningMethodHS256)
+	s, err := t.SignedString(key)
+	return s, err
 }

@@ -98,7 +98,7 @@ func (q *Queries) GetUserByUsernameAndPassword(ctx context.Context, arg GetUserB
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT is_delete, create_time, update_time, id, username, email, avatar, password, role FROM users WHERE is_delete = false and role <> 'user' ORDER BY id
+SELECT is_delete, create_time, update_time, id, username, email, avatar, password, role FROM users WHERE is_delete = false and role = 'user' ORDER BY id
 `
 
 func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {

@@ -32,11 +32,15 @@ func main() {
 	userService := services.NewUserService(queries)
 	usersHandler := handlers.NewUsersHandler(userService)
 
+	postService := services.NewPostService(queries)
+	postsHandler := handlers.NewPostsHandler(postService)
+
 	authService := services.NewAuthService(queries)
 	authHandler := handlers.NewAuthHandler(authService)
 
 	mux := http.NewServeMux()
 	handlers.RegisterUserRoutes(mux, usersHandler)
+	handlers.RegisterPostRoutes(mux, postsHandler)
 	handlers.RegisterAuthRoutes(mux, authHandler)
 
 	log.Println("listening on :8080")

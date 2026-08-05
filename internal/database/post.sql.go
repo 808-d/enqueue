@@ -11,26 +11,82 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const createPost = `-- name: CreatePost :exec
+const createPost = `-- name: CreatePost :one
 INSERT
 INTO
 posts
 (is_delete,
   create_time,
   id,
-  user_id,
   title,
   content)
-VALUES(false, now(), gen_random_uuid(), $1, $2, $3)
+VALUES(false, now(), gen_random_uuid(), $1, $2)
+RETURNING is_delete, create_time, update_time, id, title, content, user_id
 `
 
 type CreatePostParams struct {
-	UserID  pgtype.UUID
 	Title   string
 	Content pgtype.Text
 }
 
-func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) error {
-	_, err := q.db.Exec(ctx, createPost, arg.UserID, arg.Title, arg.Content)
+func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) (Post, error) {
+	row := q.db.QueryRow(ctx, createPost, arg.Title, arg.Content)
+	var i Post
+	err := row.Scan(
+		&i.IsDelete,
+		&i.CreateTime,
+		&i.UpdateTime,
+		&i.ID,
+		&i.Title,
+		&i.Content,
+		&i.UserID,
+	)
+	return i, err
+}
+
+const deletePost = `-- name: DeletePost :exec
+DELETE
+FROM
+posts
+WHERE
+id = $1
+`
+
+func (q *Queries) DeletePost(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deletePost, id)
 	return err
+}
+
+const updatePost = `-- name: UpdatePost :one
+
+UPDATE
+posts
+SET
+update_time = now(),
+title = $2,
+"content" = $3
+WHERE
+id = $1
+RETURNING is_delete, create_time, update_time, id, title, content, user_id
+`
+
+type UpdatePostParams struct {
+	ID      pgtype.UUID
+	Title   string
+	Content pgtype.Text
+}
+
+func (q *Queries) UpdatePost(ctx context.Context, arg UpdatePostParams) (Post, error) {
+	row := q.db.QueryRow(ctx, updatePost, arg.ID, arg.Title, arg.Content)
+	var i Post
+	err := row.Scan(
+		&i.IsDelete,
+		&i.CreateTime,
+		&i.UpdateTime,
+		&i.ID,
+		&i.Title,
+		&i.Content,
+		&i.UserID,
+	)
+	return i, err
 }

@@ -2,7 +2,7 @@
 SELECT * FROM users WHERE id = $1 AND is_delete = false LIMIT 1;
 
 -- name: ListUsers :many
-SELECT * FROM users WHERE is_delete = false and role <> 'user' ORDER BY id;
+SELECT * FROM users WHERE is_delete = false and role = 'user' ORDER BY id;
 
 -- name: CreateUser :one
 INSERT INTO users
