@@ -1,18 +1,23 @@
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+  /* Catppuccin Latte */
+  --text: #4c4f69;
+  --text-h: #1e1e2e;
+  --bg: #eff1f5;
+  --border: #bcc0cc;
+  --code-bg: #e6e9ef;
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --accent: #cba6f7;
+  --accent-bg: rgba(203, 166, 247, 0.12);
+  --accent-border: #8839ef;
+
+  --social-bg: rgba(230, 233, 239, 0.6);
+
+  --shadow:
+    rgba(0, 0, 0, 0.08) 0 10px 15px -3px,
+    rgba(0, 0, 0, 0.04) 0 4px 6px -2px;
+
+  --sans: system-ui, "Segoe UI", Roboto, sans-serif;
+  --heading: system-ui, "Segoe UI", Roboto, sans-serif;
   --mono: ui-monospace, Consolas, monospace;
 
   font: 18px/145% var(--sans);
@@ -32,17 +37,22 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
+    /* Catppuccin Mocha */
+    --text: #cdd6f4;
+    --text-h: #f5e0dc;
+    --bg: #1e1e2e;
+    --border: #45475a;
+    --code-bg: #181825;
+
+    --accent: #cba6f7;
+    --accent-bg: rgba(203, 166, 247, 0.15);
+    --accent-border: #b4befe;
+
+    --social-bg: rgba(49, 50, 68, 0.6);
+
     --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
+      rgba(0, 0, 0, 0.40) 0 10px 15px -3px,
+      rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
   }
 
   #social .button-icon {
@@ -109,3 +119,74 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+
+
+/* ===== Catppuccin Mocha ===== */
+
+/* Accent Colors */
+.rosewater { color: #f5e0dc; }
+.flamingo  { color: #f2cdcd; }
+.pink      { color: #f5c2e7; }
+.mauve     { color: #cba6f7; }
+.red       { color: #f38ba8; }
+.maroon    { color: #eba0ac; }
+.peach     { color: #fab387; }
+.yellow    { color: #f9e2af; }
+.green     { color: #a6e3a1; }
+.teal      { color: #94e2d5; }
+.sky       { color: #89dceb; }
+.sapphire  { color: #74c7ec; }
+.blue      { color: #89b4fa; }
+.lavender  { color: #b4befe; }
+
+/* Text */
+.text      { color: #cdd6f4; }
+.subtext1  { color: #bac2de; }
+.subtext0  { color: #a6adc8; }
+
+/* Overlay */
+.overlay2  { color: #9399b2; }
+.overlay1  { color: #7f849c; }
+.overlay0  { color: #6c7086; }
+
+/* Surface */
+.surface2  { color: #585b70; }
+.surface1  { color: #45475a; }
+.surface0  { color: #313244; }
+
+/* Background */
+.base       { color: #1e1e2e; }
+.mantle     { color: #181825; }
+.crust      { color: #11111b; }
+
+/* Background variants */
+.bg-rosewater { background: #f5e0dc; }
+.bg-flamingo  { background: #f2cdcd; }
+.bg-pink      { background: #f5c2e7; }
+.bg-mauve     { background: #cba6f7; }
+.bg-red       { background: #f38ba8; }
+.bg-maroon    { background: #eba0ac; }
+.bg-peach     { background: #fab387; }
+.bg-yellow    { background: #f9e2af; }
+.bg-green     { background: #a6e3a1; }
+.bg-teal      { background: #94e2d5; }
+.bg-sky       { background: #89dceb; }
+.bg-sapphire  { background: #74c7ec; }
+.bg-blue      { background: #89b4fa; }
+.bg-lavender  { background: #b4befe; }
+
+.bg-text      { background: #cdd6f4; }
+.bg-subtext1  { background: #bac2de; }
+.bg-subtext0  { background: #a6adc8; }
+
+.bg-overlay2  { background: #9399b2; }
+.bg-overlay1  { background: #7f849c; }
+.bg-overlay0  { background: #6c7086; }
+
+.bg-surface2  { background: #585b70; }
+.bg-surface1  { background: #45475a; }
+.bg-surface0  { background: #313244; }
+
+.bg-base      { background: #1e1e2e; }
+.bg-mantle    { background: #181825; }
+.bg-crust     { background: #11111b; }
