@@ -1,53 +1,169 @@
-import { Grid, Paper, Stack, styled } from "@mui/material";
+import { Box, Grid, InputAdornment, Stack, TextField } from "@mui/material";
+import enqueueLogo from "./assets/enqueue.svg";
 import "./App.css";
 import Button from "@mui/material/Button";
-import { catppuccin } from "./shared/CatppuccinMocha";
-
+import { catppuccin } from "./components/shared/CatppuccinMocha";
+import HomeFilledIcon from "@mui/icons-material/HomeFilled";
+import NotificationsIcon from "@mui/icons-material/Notifications";
+import TurnedInIcon from "@mui/icons-material/TurnedIn";
+import SearchIcon from "@mui/icons-material/Search";
+import { useState } from "react";
+import { Post } from "./models/post";
+import LoginIcon from "@mui/icons-material/Login";
 function App() {
   return (
     <>
-    <Home />
+      <Home />
     </>
   );
 }
-const Item = styled(Paper)(({ theme }) => ({
-  backgroundColor: '#fff',
-  ...theme.typography.body2,
-  padding: theme.spacing(1),
-  textAlign: 'center',
-  color: (theme.vars ?? theme).palette.text.secondary,
-  ...theme.applyStyles('dark', {
-    backgroundColor: '#1A2027',
-  }),
-}));
-function Home() {
 
+function Home() {
   return (
     <Grid container spacing={1}>
-    <Grid size={{ xs: 3, md: 2 }}>
-    <Stack spacing={2}>
-    <Button
-    sx={{
-      bgcolor: catppuccin.base,
-      color: catppuccin.text,
-      "&:hover": {
-	bgcolor: catppuccin.surface0,
-      },
-    }}
-    >
-    Item1
-    </Button>
-    <Button variant="contained">Item2</Button>
-    <Button variant="contained">Item3</Button>
-    </Stack>
-    </Grid>
-    <Grid size={{ xs: 4, md: 7 }}>
-    <Item> Middle</Item>
-    </Grid>
-    <Grid size={{ xs: 4, md: 3 }}>
-    <Item> Right </Item>
-    </Grid>
+      <Left />
+      <Mid />
+      <Grid size={{ xs: 4, md: 2 }}>{/* <Item> Right </Item> */}</Grid>
     </Grid>
   );
 }
+
+function Left() {
+  return (
+    <Grid size={{ xs: 3, md: 2 }}>
+      <Stack spacing={2}>
+        <Button variant="text" sx={{ width: "fit-content" }}>
+          <img src={enqueueLogo} alt="Enqueue" style={{ width: "50px" }} />
+        </Button>
+        <Button
+          startIcon={<HomeFilledIcon />}
+          sx={{
+            justifyContent: "flex-start",
+            bgcolor: catppuccin.base,
+            color: catppuccin.text,
+            "&:hover": {
+              bgcolor: catppuccin.surface0,
+            },
+          }}
+        >
+          Home
+        </Button>
+
+        <Button
+          startIcon={<TurnedInIcon />}
+          sx={{
+            justifyContent: "flex-start",
+            bgcolor: catppuccin.base,
+            color: catppuccin.text,
+            "&:hover": {
+              bgcolor: catppuccin.surface0,
+            },
+          }}
+        >
+          Subscriptions
+        </Button>
+
+        <Button
+          startIcon={<NotificationsIcon />}
+          sx={{
+            justifyContent: "flex-start",
+            bgcolor: catppuccin.base,
+            color: catppuccin.text,
+            "&:hover": {
+              bgcolor: catppuccin.surface0,
+            },
+          }}
+        >
+          Activity
+        </Button>
+        <Button
+          startIcon={<SearchIcon />}
+          sx={{
+            justifyContent: "flex-start",
+            bgcolor: catppuccin.base,
+            color: catppuccin.text,
+            "&:hover": {
+              bgcolor: catppuccin.surface0,
+            },
+          }}
+        >
+          Explore
+        </Button>
+        <Button
+          startIcon={<SearchIcon />}
+          sx={{
+            justifyContent: "flex-start",
+            bgcolor: catppuccin.base,
+            color: catppuccin.text,
+            "&:hover": {
+              bgcolor: catppuccin.surface0,
+            },
+          }}
+        >
+          Profile
+        </Button>
+
+        <Button
+          startIcon={<LoginIcon />}
+          sx={{
+            justifyContent: "flex-start",
+            bgcolor: catppuccin.maroon,
+            color: catppuccin.base,
+            "&:hover": {
+              bgcolor: catppuccin.red,
+            },
+          }}
+          href="/login"
+        >
+          Login
+        </Button>
+      </Stack>
+    </Grid>
+  );
+}
+
+function Mid() {
+  const [posts, setPosts] = useState<Post[]>([]);
+  return (
+    <Grid size={{ xs: 4, md: 8 }}>
+      <Box sx={{ display: "flex", alignItems: "flex-end" }}>
+        <TextField
+          placeholder="What's on your mind"
+          variant="filled"
+          fullWidth={true}
+          sx={{
+            "& .MuiInputBase-input": {
+              color: catppuccin.text,
+            },
+            "& .MuiInputAdornment-root": {
+              color: catppuccin.subtext1,
+            },
+            "& .MuiFilledInput-root": {
+              bgcolor: catppuccin.surface0,
+              "&:hover": {
+                bgcolor: catppuccin.surface1,
+              },
+              "&.Mui-focused": {
+                bgcolor: catppuccin.surface1,
+              },
+              "&:after": {
+                borderBottom: `2px solid ${catppuccin.mauve}`,
+              },
+            },
+          }}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon sx={{ color: catppuccin.mauve }} />
+                </InputAdornment>
+              ),
+            },
+          }}
+        />
+      </Box>
+    </Grid>
+  );
+}
+function Right() {}
 export default App;

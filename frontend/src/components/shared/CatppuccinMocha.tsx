@@ -1,3 +1,4 @@
+/* Catppuccin Mocha Palette */
 export const catppuccin = {
   rosewater: "#f5e0dc",
   flamingo: "#f2cdcd",
@@ -27,19 +28,3 @@ export const catppuccin = {
   mantle: "#181825",
   crust: "#11111b",
 };
-//
-// const theme = createTheme({
-//   palette: {
-//     mode: "dark",
-//     background: {
-//       default: catppuccin.base,
-//       paper: catppuccin.mantle,
-//     },
-//     text: {
-//       primary: catppuccin.text,
-//       secondary: catppuccin.subtext1,
-//     },
-//   },
-// });
-//
-// export default theme;

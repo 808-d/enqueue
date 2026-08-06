@@ -1,2 +1,0 @@
-ALTER TABLE posts
-ADD COLUMN user_id UUID NOT NULL REFERENCES users(id);

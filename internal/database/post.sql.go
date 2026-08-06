@@ -21,7 +21,7 @@ posts
   title,
   content)
 VALUES(false, now(), gen_random_uuid(), $1, $2)
-RETURNING is_delete, create_time, update_time, id, title, content, user_id
+RETURNING is_delete, create_time, update_time, id, title, content
 `
 
 type CreatePostParams struct {
@@ -39,7 +39,6 @@ func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) (Post, e
 		&i.ID,
 		&i.Title,
 		&i.Content,
-		&i.UserID,
 	)
 	return i, err
 }
@@ -67,7 +66,7 @@ title = $2,
 "content" = $3
 WHERE
 id = $1
-RETURNING is_delete, create_time, update_time, id, title, content, user_id
+RETURNING is_delete, create_time, update_time, id, title, content
 `
 
 type UpdatePostParams struct {
@@ -86,7 +85,6 @@ func (q *Queries) UpdatePost(ctx context.Context, arg UpdatePostParams) (Post, e
 		&i.ID,
 		&i.Title,
 		&i.Content,
-		&i.UserID,
 	)
 	return i, err
 }

@@ -40,7 +40,6 @@ type Post struct {
 	ID         pgtype.UUID
 	Title      string
 	Content    pgtype.Text
-	UserID     pgtype.UUID
 }
 
 type Repost struct {
