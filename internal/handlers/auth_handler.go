@@ -27,7 +27,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	exists, err := h.authService.GetUserByUsernameAndPassword(
+	token, err := h.authService.GetUserByUsernameAndPassword(
 		r.Context(),
 		req.Username,
 		req.Password,
@@ -37,15 +37,13 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !exists {
+	if token == "" {
 		http.Error(w, "Invalid username or password", http.StatusUnauthorized)
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{
-		"message": "Login successful",
-	})
+	json.NewEncoder(w).Encode(token)
 }
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 

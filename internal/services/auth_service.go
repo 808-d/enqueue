@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"enqueue/internal/database"
+	"enqueue/internal/utils"
 	"errors"
 	"os"
 
@@ -29,29 +30,26 @@ func (s *AuthService) GetUserByUsernameAndPassword(
 	ctx context.Context,
 	username string,
 	password string,
-) (bool, error) {
-	isExists, err := s.userRepo.GetUserByUsernameAndPassword(
+) (string, error) {
+	user, err := s.userRepo.GetUserByUsernameAndPassword(
 		ctx,
 		database.GetUserByUsernameAndPasswordParams{
 			Username: username,
 			Password: pgtype.Text{
-				String: password,
+				String: utils.Hash256(&password),
 				Valid:  true,
 			},
 		},
 	)
 	if err != nil {
+		return "", errors.New("invalid username or password")
 
 	}
+	return GenerateToken(user.Username, user.Email, user.Role)
 
-	if !isExists {
-
-	}
-
-	return false, errors.New("")
 }
 
-func GenerateToken(username string) (string, error) {
+func GenerateToken(username string, email string, role string) (string, error) {
 	key := os.Getenv("JWT_SECRET")
 	t := jwt.New(jwt.SigningMethodHS256)
 	s, err := t.SignedString(key)

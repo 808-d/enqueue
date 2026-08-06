@@ -29,6 +29,6 @@ WHERE id = $1;
 
 
 -- name: GetUserByUsernameAndPassword :one
-SELECT EXISTS (SELECT 1 FROM users
-  WHERE username = $1 AND password = $2 AND is_delete = false);
+SELECT * FROM users
+  WHERE username = $1 AND password = $2 AND is_delete = false LIMIT 1;
 

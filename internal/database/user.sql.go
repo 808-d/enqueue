@@ -81,8 +81,8 @@ func (q *Queries) GetUser(ctx context.Context, id pgtype.UUID) (User, error) {
 }
 
 const getUserByUsernameAndPassword = `-- name: GetUserByUsernameAndPassword :one
-SELECT EXISTS (SELECT 1 FROM users
-  WHERE username = $1 AND password = $2 AND is_delete = false)
+SELECT is_delete, create_time, update_time, id, username, email, avatar, password, role FROM users
+  WHERE username = $1 AND password = $2 AND is_delete = false LIMIT 1
 `
 
 type GetUserByUsernameAndPasswordParams struct {
@@ -90,11 +90,21 @@ type GetUserByUsernameAndPasswordParams struct {
 	Password pgtype.Text
 }
 
-func (q *Queries) GetUserByUsernameAndPassword(ctx context.Context, arg GetUserByUsernameAndPasswordParams) (bool, error) {
+func (q *Queries) GetUserByUsernameAndPassword(ctx context.Context, arg GetUserByUsernameAndPasswordParams) (User, error) {
 	row := q.db.QueryRow(ctx, getUserByUsernameAndPassword, arg.Username, arg.Password)
-	var exists bool
-	err := row.Scan(&exists)
-	return exists, err
+	var i User
+	err := row.Scan(
+		&i.IsDelete,
+		&i.CreateTime,
+		&i.UpdateTime,
+		&i.ID,
+		&i.Username,
+		&i.Email,
+		&i.Avatar,
+		&i.Password,
+		&i.Role,
+	)
+	return i, err
 }
 
 const listUsers = `-- name: ListUsers :many
