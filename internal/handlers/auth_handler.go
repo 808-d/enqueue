@@ -3,6 +3,8 @@ package handlers
 import (
 	"encoding/json"
 	"enqueue/internal/services"
+	"enqueue/internal/utils"
+	"log"
 	"net/http"
 )
 
@@ -21,18 +23,21 @@ type LoginRequest struct {
 
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
-
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		log.Printf("Decode error: %v\n", err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	log.Printf("request: %+v\n", req)
 
+	hashedPassword := utils.Hash256(req.Password)
 	token, err := h.authService.GetUserByUsernameAndPassword(
 		r.Context(),
 		req.Username,
-		req.Password,
+		hashedPassword,
 	)
 	if err != nil {
+		log.Printf("Service error: %v\n", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -41,9 +46,18 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid username or password", http.StatusUnauthorized)
 		return
 	}
+	// save in http cookie only
+	http.SetCookie(w, &http.Cookie{
+		Name:     "token",
+		Value:    token,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   false, // true in production with HTTPS
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   60 * 60 * 24 * 7, // 7 days
+	})
 
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(token)
 }
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 

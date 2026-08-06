@@ -18,10 +18,22 @@ export default function Login() {
     password: "",
   });
 
-  const response = axios.post("http://localhost:8080/auth/login", {
-    username: loginState.username,
-    password: loginState.password,
-  });
+  async function login() {
+    const response = await axios.post(
+      "http://localhost:8080/login",
+      {
+        username: loginState.username,
+        password: loginState.password,
+      },
+      {
+        withCredentials: true,
+      },
+    );
+    if (response.status === 200) {
+      window.location.href = "/";
+    }
+  }
+
   return (
     <Box
       sx={{
@@ -148,15 +160,7 @@ export default function Login() {
                     bgcolor: catppuccin.pink,
                   },
                 }}
-                onClick={async () => {
-                  const response = await axios.post(
-                    "http://localhost:8080/login",
-                    {
-                      username: loginState.username,
-                      password: loginState.password,
-                    },
-                  );
-                }}
+                onClick={login}
               >
                 Sign In
               </Button>

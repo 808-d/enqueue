@@ -3,9 +3,9 @@ package services
 import (
 	"context"
 	"enqueue/internal/database"
-	"enqueue/internal/utils"
 	"errors"
 	"os"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -36,7 +36,7 @@ func (s *AuthService) GetUserByUsernameAndPassword(
 		database.GetUserByUsernameAndPasswordParams{
 			Username: username,
 			Password: pgtype.Text{
-				String: utils.Hash256(&password),
+				String: password,
 				Valid:  true,
 			},
 		},
@@ -49,9 +49,18 @@ func (s *AuthService) GetUserByUsernameAndPassword(
 
 }
 
-func GenerateToken(username string, email string, role string) (string, error) {
-	key := os.Getenv("JWT_SECRET")
-	t := jwt.New(jwt.SigningMethodHS256)
-	s, err := t.SignedString(key)
-	return s, err
+func GenerateToken(username, email, role string) (string, error) {
+	key := []byte(os.Getenv("JWT_SECRET"))
+
+	claims := jwt.MapClaims{
+		"username": username,
+		"email":    email,
+		"role":     role,
+		"exp":      time.Now().Add(24 * time.Hour).Unix(),
+		"iat":      time.Now().Unix(),
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+	return token.SignedString(key)
 }
