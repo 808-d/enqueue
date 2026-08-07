@@ -27,6 +27,14 @@ type Comment struct {
 	Cotent     pgtype.Text
 }
 
+type EmailVerification struct {
+	ID        pgtype.UUID
+	UserID    pgtype.UUID
+	Token     string
+	ExpiresAt pgtype.Timestamptz
+	CreatedAt pgtype.Timestamptz
+}
+
 type Like struct {
 	UserID     pgtype.UUID
 	PostID     pgtype.UUID
@@ -57,13 +65,14 @@ type TimeLog struct {
 }
 
 type User struct {
-	IsDelete   bool
-	CreateTime pgtype.Timestamp
-	UpdateTime pgtype.Timestamp
-	ID         pgtype.UUID
-	Username   string
-	Email      string
-	Avatar     pgtype.Text
-	Password   pgtype.Text
-	Role       string
+	IsDelete      bool
+	CreateTime    pgtype.Timestamp
+	UpdateTime    pgtype.Timestamp
+	ID            pgtype.UUID
+	Username      string
+	Email         string
+	Avatar        pgtype.Text
+	Password      pgtype.Text
+	Role          string
+	EmailVerified bool
 }

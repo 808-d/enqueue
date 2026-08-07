@@ -2,8 +2,8 @@ package handlers
 
 import (
 	"encoding/json"
+	"enqueue/internal/dtos/auth"
 	"enqueue/internal/services"
-	"enqueue/internal/utils"
 	"log"
 	"net/http"
 )
@@ -16,13 +16,8 @@ func NewAuthHandler(authService *services.AuthService) *AuthHandler {
 	return &AuthHandler{authService: authService}
 }
 
-type LoginRequest struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-}
-
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
-	var req LoginRequest
+	var req auth.LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("Decode error: %v\n", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -30,11 +25,10 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Printf("request: %+v\n", req)
 
-	hashedPassword := utils.Hash256(req.Password)
-	token, err := h.authService.GetUserByUsernameAndPassword(
+	token, err := h.authService.GetToken(
 		r.Context(),
 		req.Username,
-		hashedPassword,
+		req.Password,
 	)
 	if err != nil {
 		log.Printf("Service error: %v\n", err)
@@ -59,6 +53,31 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 }
-func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
+func (h *AuthHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 
+	var req auth.SigninRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("Decode error: %v\n", err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	isValid, err := h.authService.ValidateSignUpRequest(r.Context(), req.Username, req.Email)
+	if err != nil {
+		log.Printf("Validation error: %v\n", err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if !isValid {
+		http.Error(w, "Invalid sign up request", http.StatusBadRequest)
+		return
+	}
+
+	err = h.authService.CreateUser(r.Context(), req.Username, req.Email, req.Password)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
 }

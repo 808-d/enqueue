@@ -9,9 +9,10 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { catppuccin } from "../components/shared/CatppuccinMocha";
+import { catppuccin } from "../utils/catppuccinMocha";
 import { useState } from "react";
-import axios, { isCancel, AxiosError } from "axios";
+import axios from "axios";
+import { endpoints } from "../utils/endpoints";
 export default function Login() {
   const [loginState, setLoginState] = useState({
     username: "",
@@ -20,7 +21,7 @@ export default function Login() {
 
   async function login() {
     const response = await axios.post(
-      "http://localhost:8080/login",
+      endpoints.login,
       {
         username: loginState.username,
         password: loginState.password,

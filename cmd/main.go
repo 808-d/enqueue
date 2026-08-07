@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
+	"github.com/rs/cors"
 
 	"enqueue/internal/database"
 	"enqueue/internal/handlers"
@@ -43,6 +44,15 @@ func main() {
 	handlers.RegisterPostRoutes(mux, postsHandler)
 	handlers.RegisterAuthRoutes(mux, authHandler)
 
+	// middlewares
+	c := cors.New(cors.Options{
+		AllowedOrigins:   []string{os.Getenv("LOCAL_HOST_FE"), os.Getenv("LOCAL_HOST_BE")},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Origin", "Content-Type", "Authorization"},
+		AllowCredentials: true,
+	})
+
 	log.Println("listening on :8080")
-	log.Fatal(http.ListenAndServe(":8080", mux))
+	log.Fatal(http.ListenAndServe(":8080", c.Handler(mux)))
+
 }

@@ -11,40 +11,21 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const createUser = `-- name: CreateUser :one
+const createUser = `-- name: CreateUser :exec
 INSERT INTO users
-(id, username, email, avatar, password, role, is_delete, create_time, update_time)
-VALUES (gen_random_uuid(), $1, $2, $3, $4, 'user', false, now(), now())
-RETURNING is_delete, create_time, update_time, id, username, email, avatar, password, role
+(id, username, email, password, role, is_delete, email_verified, create_time)
+VALUES (gen_random_uuid(), $1, $2, $3, 'user', false, false,now())
 `
 
 type CreateUserParams struct {
 	Username string
 	Email    string
-	Avatar   pgtype.Text
 	Password pgtype.Text
 }
 
-func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
-	row := q.db.QueryRow(ctx, createUser,
-		arg.Username,
-		arg.Email,
-		arg.Avatar,
-		arg.Password,
-	)
-	var i User
-	err := row.Scan(
-		&i.IsDelete,
-		&i.CreateTime,
-		&i.UpdateTime,
-		&i.ID,
-		&i.Username,
-		&i.Email,
-		&i.Avatar,
-		&i.Password,
-		&i.Role,
-	)
-	return i, err
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
+	_, err := q.db.Exec(ctx, createUser, arg.Username, arg.Email, arg.Password)
+	return err
 }
 
 const deleteUser = `-- name: DeleteUser :exec
@@ -60,7 +41,7 @@ func (q *Queries) DeleteUser(ctx context.Context, id pgtype.UUID) error {
 }
 
 const getUser = `-- name: GetUser :one
-SELECT is_delete, create_time, update_time, id, username, email, avatar, password, role FROM users WHERE id = $1 AND is_delete = false LIMIT 1
+SELECT is_delete, create_time, update_time, id, username, email, avatar, password, role, email_verified FROM users WHERE id = $1 AND is_delete = false LIMIT 1
 `
 
 func (q *Queries) GetUser(ctx context.Context, id pgtype.UUID) (User, error) {
@@ -76,13 +57,14 @@ func (q *Queries) GetUser(ctx context.Context, id pgtype.UUID) (User, error) {
 		&i.Avatar,
 		&i.Password,
 		&i.Role,
+		&i.EmailVerified,
 	)
 	return i, err
 }
 
 const getUserByUsernameAndPassword = `-- name: GetUserByUsernameAndPassword :one
-SELECT is_delete, create_time, update_time, id, username, email, avatar, password, role FROM users
-  WHERE username = $1 AND password = $2 AND is_delete = false LIMIT 1
+SELECT is_delete, create_time, update_time, id, username, email, avatar, password, role, email_verified FROM users
+WHERE username = $1 AND password = $2 AND is_delete = false LIMIT 1
 `
 
 type GetUserByUsernameAndPasswordParams struct {
@@ -103,12 +85,13 @@ func (q *Queries) GetUserByUsernameAndPassword(ctx context.Context, arg GetUserB
 		&i.Avatar,
 		&i.Password,
 		&i.Role,
+		&i.EmailVerified,
 	)
 	return i, err
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT is_delete, create_time, update_time, id, username, email, avatar, password, role FROM users WHERE is_delete = false and role = 'user' ORDER BY id
+SELECT is_delete, create_time, update_time, id, username, email, avatar, password, role, email_verified FROM users WHERE is_delete = false and role = 'user' ORDER BY id
 `
 
 func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
@@ -130,6 +113,7 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 			&i.Avatar,
 			&i.Password,
 			&i.Role,
+			&i.EmailVerified,
 		); err != nil {
 			return nil, err
 		}
@@ -150,7 +134,7 @@ avatar = $4,
 password = $5,
 update_time = now()
 WHERE id = $1 AND is_delete = false
-RETURNING is_delete, create_time, update_time, id, username, email, avatar, password, role
+RETURNING is_delete, create_time, update_time, id, username, email, avatar, password, role, email_verified
 `
 
 type UpdateUserParams struct {
@@ -180,6 +164,39 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.Avatar,
 		&i.Password,
 		&i.Role,
+		&i.EmailVerified,
 	)
 	return i, err
+}
+
+const userExistsByUsernameOrEmail = `-- name: UserExistsByUsernameOrEmail :one
+SELECT EXISTS (
+    SELECT 1
+    FROM users
+    WHERE (username = $1 OR email = $2)
+      AND is_delete = false
+)
+`
+
+type UserExistsByUsernameOrEmailParams struct {
+	Username string
+	Email    string
+}
+
+func (q *Queries) UserExistsByUsernameOrEmail(ctx context.Context, arg UserExistsByUsernameOrEmailParams) (bool, error) {
+	row := q.db.QueryRow(ctx, userExistsByUsernameOrEmail, arg.Username, arg.Email)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
+const veifyUser = `-- name: VeifyUser :exec
+UPDATE users
+SET email_verified = true, update_time = now()
+WHERE Id = $1 AND is_delete = false
+`
+
+func (q *Queries) VeifyUser(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, veifyUser, id)
+	return err
 }

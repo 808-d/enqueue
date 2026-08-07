@@ -1,8 +1,8 @@
-export class Post {
-  IsDelete: boolean
-  CreateTime: Date
-  UpdateTime: Date
-  ID: string
-  Title: string
-  Content: string
+export interface Post {
+  id: string;
+  title: string;
+  content: string;
+  isDelete: boolean;
+  createTime: string;
+  updateTime: string;
 }
