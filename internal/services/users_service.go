@@ -20,14 +20,10 @@ func (s *UserService) GetUsers(ctx context.Context) ([]database.User, error) {
 	return s.userRepo.ListUsers(ctx)
 }
 
-func (s *UserService) CreateUser(ctx context.Context, username string, avatar string, email string, password string) {
+func (s *UserService) CreateUser(ctx context.Context, username string, email string, password string) {
 	s.userRepo.CreateUser(ctx, database.CreateUserParams{
 		Username: username,
-		Avatar: pgtype.Text{
-			String: avatar,
-			Valid:  true,
-		},
-		Email: email,
+		Email:    email,
 		Password: pgtype.Text{
 			String: password,
 			Valid:  true,

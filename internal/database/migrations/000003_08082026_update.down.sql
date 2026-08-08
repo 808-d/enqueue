@@ -1,0 +1,4 @@
+DROP TABLE IF EXISTS composes;
+
+ALTER TABLE email_verifications
+ALTER COLUMN id DROP DEFAULT;
