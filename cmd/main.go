@@ -30,13 +30,14 @@ func main() {
 	defer pool.Close()
 
 	queries := database.New(pool)
+
 	userService := services.NewUserService(queries)
 	usersHandler := handlers.NewUsersHandler(userService)
 
 	postService := services.NewPostService(queries)
 	postsHandler := handlers.NewPostsHandler(postService)
 
-	authService := services.NewAuthService(queries)
+	authService := services.NewAuthService(pool)
 	authHandler := handlers.NewAuthHandler(authService)
 
 	mux := http.NewServeMux()
@@ -46,7 +47,7 @@ func main() {
 
 	// middlewares
 	c := cors.New(cors.Options{
-		AllowedOrigins:   []string{os.Getenv("LOCAL_HOST_FE"), os.Getenv("LOCAL_HOST_BE")},
+		AllowedOrigins:   []string{os.Getenv("FRONTEND_URL"), os.Getenv("BACKEND_URL")},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Origin", "Content-Type", "Authorization"},
 		AllowCredentials: true,

@@ -8,4 +8,5 @@ export const endpoints = {
   logout: `${API_BASE_URL}/logout`,
   posts: `${API_BASE_URL}/posts`,
   users: `${API_BASE_URL}/users`,
+  verify: `${API_BASE_URL}/verify`,
 };

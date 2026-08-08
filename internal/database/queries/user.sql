@@ -4,11 +4,11 @@ SELECT * FROM users WHERE id = $1 AND is_delete = false LIMIT 1;
 -- name: ListUsers :many
 SELECT * FROM users WHERE is_delete = false and role = 'user' ORDER BY id;
 
--- name: CreateUser :exec
+-- name: CreateUser :one
 INSERT INTO users
 (id, username, email, password, role, is_delete, email_verified, create_time)
-VALUES (gen_random_uuid(), $1, $2, $3, 'user', false, false,now());
-
+VALUES (gen_random_uuid(), $1, $2, $3, 'user', false, false,now())
+RETURNING id;
 -- name: UpdateUser :one
 UPDATE users
 SET 
@@ -31,7 +31,7 @@ WHERE id = $1;
 SELECT * FROM users
 WHERE username = $1 AND password = $2 AND is_delete = false LIMIT 1;
 
--- name: VeifyUser :exec
+-- name: VerifyUser :exec
 UPDATE users
 SET email_verified = true, update_time = now()
 WHERE Id = $1 AND is_delete = false;
@@ -43,3 +43,12 @@ SELECT EXISTS (
     WHERE (username = $1 OR email = $2)
       AND is_delete = false
 );
+
+
+-- name: CheckVerify :one
+SELECT user_id FROM email_verifications
+WHERE (token = $1 AND expires_at < now());
+
+-- name: DeleteToken :exec
+DELETE FROM email_verifications
+WHERE "token"= $1;

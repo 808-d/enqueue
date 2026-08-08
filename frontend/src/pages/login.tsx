@@ -9,7 +9,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { catppuccin } from "../utils/catppuccinMocha";
+import { catppuccin } from "../theme/catppuccinMocha";
 import { useState } from "react";
 import axios from "axios";
 import { endpoints } from "../utils/endpoints";

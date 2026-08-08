@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"net/smtp"
@@ -31,4 +32,14 @@ func SendEmail(sender, password, receiver, subject, body string) error {
 		[]string{receiver},
 		msg,
 	)
+}
+
+func GenerateVerificationToken() (string, error) {
+	bytes := make([]byte, 32)
+
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+
+	return hex.EncodeToString(bytes), nil
 }

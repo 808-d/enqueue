@@ -11,10 +11,23 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const createUser = `-- name: CreateUser :exec
+const checkVerify = `-- name: CheckVerify :one
+SELECT user_id FROM email_verifications
+WHERE (token = $1 AND expires_at < now())
+`
+
+func (q *Queries) CheckVerify(ctx context.Context, token string) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, checkVerify, token)
+	var user_id pgtype.UUID
+	err := row.Scan(&user_id)
+	return user_id, err
+}
+
+const createUser = `-- name: CreateUser :one
 INSERT INTO users
 (id, username, email, password, role, is_delete, email_verified, create_time)
 VALUES (gen_random_uuid(), $1, $2, $3, 'user', false, false,now())
+RETURNING id
 `
 
 type CreateUserParams struct {
@@ -23,8 +36,20 @@ type CreateUserParams struct {
 	Password pgtype.Text
 }
 
-func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
-	_, err := q.db.Exec(ctx, createUser, arg.Username, arg.Email, arg.Password)
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, createUser, arg.Username, arg.Email, arg.Password)
+	var id pgtype.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
+const deleteToken = `-- name: DeleteToken :exec
+DELETE FROM email_verifications
+WHERE "token"= $1
+`
+
+func (q *Queries) DeleteToken(ctx context.Context, token string) error {
+	_, err := q.db.Exec(ctx, deleteToken, token)
 	return err
 }
 
@@ -190,13 +215,13 @@ func (q *Queries) UserExistsByUsernameOrEmail(ctx context.Context, arg UserExist
 	return exists, err
 }
 
-const veifyUser = `-- name: VeifyUser :exec
+const verifyUser = `-- name: VerifyUser :exec
 UPDATE users
 SET email_verified = true, update_time = now()
 WHERE Id = $1 AND is_delete = false
 `
 
-func (q *Queries) VeifyUser(ctx context.Context, id pgtype.UUID) error {
-	_, err := q.db.Exec(ctx, veifyUser, id)
+func (q *Queries) VerifyUser(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, verifyUser, id)
 	return err
 }

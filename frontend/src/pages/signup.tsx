@@ -12,8 +12,8 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { catppuccin } from "../utils/catppuccinMocha";
-import { useState } from "react";
+import { catppuccin } from "../theme/catppuccinMocha";
+import { useRef, useState } from "react";
 import axios from "axios";
 import { endpoints } from "../utils/endpoints";
 
@@ -29,15 +29,17 @@ export default function Signup() {
     severity: "success" as "success" | "error" | "warning" | "info",
     message: "",
   });
+  const [submitting, setSubmitting] = useState(false);
+
   const signUp = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setSubmitting(true);
     try {
       await axios.post(endpoints.signup, {
         username: signUpState.username,
         email: signUpState.email,
         password: signUpState.password,
       });
-
       setToast({
         open: true,
         severity: "success",
@@ -60,6 +62,8 @@ export default function Signup() {
           message: "An unexpected error occurred.",
         });
       }
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -221,8 +225,9 @@ export default function Signup() {
                       },
                     }}
                     type="submit"
+                    disabled={submitting}
                   >
-                    Create Account
+                    {submitting ? "Creating..." : "Create Account"}
                   </Button>
                 </Stack>
               </Box>

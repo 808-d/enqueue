@@ -27,6 +27,13 @@ type Comment struct {
 	Cotent     pgtype.Text
 }
 
+type Compose struct {
+	UserID     pgtype.UUID
+	PostID     pgtype.UUID
+	CreateTime pgtype.Timestamp
+	UpdateTime pgtype.Timestamp
+}
+
 type EmailVerification struct {
 	ID        pgtype.UUID
 	UserID    pgtype.UUID

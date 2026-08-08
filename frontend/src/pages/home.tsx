@@ -1,5 +1,5 @@
 import Button from "@mui/material/Button";
-import { catppuccin } from "../utils/catppuccinMocha";
+import { catppuccin } from "../theme/catppuccinMocha";
 import HomeFilledIcon from "@mui/icons-material/HomeFilled";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import TurnedInIcon from "@mui/icons-material/TurnedIn";
