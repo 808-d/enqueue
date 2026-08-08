@@ -9,4 +9,5 @@ export const endpoints = {
   posts: `${API_BASE_URL}/posts`,
   users: `${API_BASE_URL}/users`,
   verify: `${API_BASE_URL}/verify`,
+  me: `${API_BASE_URL}/me`,
 };

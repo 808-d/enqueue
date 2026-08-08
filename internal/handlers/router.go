@@ -19,4 +19,5 @@ func RegisterAuthRoutes(mux *http.ServeMux, h *AuthHandler) {
 	mux.HandleFunc("POST /login", h.Login)
 	mux.HandleFunc("POST /signup", h.SignUp)
 	mux.HandleFunc("POST /verify", h.Verify)
+	mux.HandleFunc("GET /me", h.Me)
 }

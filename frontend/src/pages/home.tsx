@@ -18,7 +18,23 @@ import {
 } from "@mui/material";
 import enqueueLogo from "../assets/enqueue.svg";
 import type { Post } from "../models/post";
+import { Link } from "react-router-dom";
+import { useAuth } from "../contexts/authContext";
+import {
+  Person,
+  PersonPinCircle,
+  PersonPinCircleRounded,
+} from "@mui/icons-material";
 function Home() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!user) {
+    return <div>Not logged in</div>;
+  }
   return (
     <Grid container spacing={1}>
       <Left />
@@ -29,6 +45,12 @@ function Home() {
 }
 
 function Left() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return null;
+  }
+
   return (
     <Grid size={{ xs: 3, md: 2 }}>
       <Stack spacing={2}>
@@ -36,6 +58,8 @@ function Left() {
           <img src={enqueueLogo} alt="Enqueue" style={{ width: "50px" }} />
         </Button>
         <Button
+          component={Link}
+          to="/"
           startIcon={<HomeFilledIcon />}
           sx={{
             justifyContent: "flex-start",
@@ -89,34 +113,39 @@ function Left() {
         >
           Explore
         </Button>
-        <Button
-          startIcon={<SearchIcon />}
-          sx={{
-            justifyContent: "flex-start",
-            bgcolor: catppuccin.base,
-            color: catppuccin.text,
-            "&:hover": {
-              bgcolor: catppuccin.surface0,
-            },
-          }}
-        >
-          Profile
-        </Button>
-
-        <Button
-          startIcon={<LoginIcon />}
-          sx={{
-            justifyContent: "flex-start",
-            bgcolor: catppuccin.maroon,
-            color: catppuccin.base,
-            "&:hover": {
-              bgcolor: catppuccin.red,
-            },
-          }}
-          href="/login"
-        >
-          Login
-        </Button>
+        {user ? (
+          <Button
+            component={Link}
+            to="/profile"
+            startIcon={<Person />}
+            sx={{
+              justifyContent: "flex-start",
+              bgcolor: catppuccin.base,
+              color: catppuccin.text,
+              "&:hover": {
+                bgcolor: catppuccin.surface0,
+              },
+            }}
+          >
+            Profile
+          </Button>
+        ) : (
+          <Button
+            component={Link}
+            to="/login"
+            startIcon={<LoginIcon />}
+            sx={{
+              justifyContent: "flex-start",
+              bgcolor: catppuccin.maroon,
+              color: catppuccin.base,
+              "&:hover": {
+                bgcolor: catppuccin.red,
+              },
+            }}
+          >
+            Login
+          </Button>
+        )}
       </Stack>
     </Grid>
   );
