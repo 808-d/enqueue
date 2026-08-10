@@ -25,6 +25,7 @@ type Comment struct {
 	UserID     pgtype.UUID
 	PostID     pgtype.UUID
 	Cotent     pgtype.Text
+	ReplyTo    pgtype.UUID
 }
 
 type Compose struct {
@@ -49,12 +50,14 @@ type Like struct {
 }
 
 type Post struct {
-	IsDelete   bool
-	CreateTime pgtype.Timestamp
-	UpdateTime pgtype.Timestamp
-	ID         pgtype.UUID
-	Title      string
-	Content    pgtype.Text
+	CreateTime  pgtype.Timestamp
+	UpdateTime  pgtype.Timestamp
+	ID          pgtype.UUID
+	Title       pgtype.Text
+	Content     pgtype.Text
+	Thumbnail   pgtype.Text
+	Description pgtype.Text
+	Status      int32
 }
 
 type Repost struct {
@@ -82,4 +85,6 @@ type User struct {
 	Password      pgtype.Text
 	Role          string
 	EmailVerified bool
+	Bio           pgtype.Text
+	Name          pgtype.Text
 }

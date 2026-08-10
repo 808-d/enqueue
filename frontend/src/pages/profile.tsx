@@ -189,13 +189,13 @@ export function Profile() {
 
                 <Box>
                   <Typography sx={{ fontWeight: 700 }}>128</Typography>
-
                   <Typography
                     variant="caption"
                     sx={{ color: catppuccin.subtext0 }}
                   >
                     Followers
                   </Typography>
+                  createPost, getPostsByUser,
                 </Box>
 
                 <Box>

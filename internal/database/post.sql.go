@@ -12,79 +12,101 @@ import (
 )
 
 const createPost = `-- name: CreatePost :one
-INSERT
-INTO
-posts
-(is_delete,
-  create_time,
-  id,
-  title,
-  content)
-VALUES(false, now(), gen_random_uuid(), $1, $2)
-RETURNING is_delete, create_time, update_time, id, title, content
+INSERT INTO posts (
+    id,
+    status
+)
+VALUES (
+    gen_random_uuid(),
+    1
+)
+RETURNING create_time, update_time, id, title, content, thumbnail, description, status
 `
 
-type CreatePostParams struct {
-	Title   string
-	Content pgtype.Text
-}
-
-func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) (Post, error) {
-	row := q.db.QueryRow(ctx, createPost, arg.Title, arg.Content)
+func (q *Queries) CreatePost(ctx context.Context) (Post, error) {
+	row := q.db.QueryRow(ctx, createPost)
 	var i Post
 	err := row.Scan(
-		&i.IsDelete,
 		&i.CreateTime,
 		&i.UpdateTime,
 		&i.ID,
 		&i.Title,
 		&i.Content,
+		&i.Thumbnail,
+		&i.Description,
+		&i.Status,
 	)
 	return i, err
 }
 
-const deletePost = `-- name: DeletePost :exec
-DELETE
-FROM
-posts
-WHERE
-id = $1
-`
-
-func (q *Queries) DeletePost(ctx context.Context, id pgtype.UUID) error {
-	_, err := q.db.Exec(ctx, deletePost, id)
-	return err
-}
-
 const updatePost = `-- name: UpdatePost :one
-
-UPDATE
-posts
+UPDATE posts
 SET
-update_time = now(),
-title = $2,
-"content" = $3
-WHERE
-id = $1
-RETURNING is_delete, create_time, update_time, id, title, content
+    update_time = now(),
+    title = $2,
+    content = $3,
+    description = $4,
+    thumbnail = $5
+WHERE id = $1
+RETURNING create_time, update_time, id, title, content, thumbnail, description, status
 `
 
 type UpdatePostParams struct {
-	ID      pgtype.UUID
-	Title   string
-	Content pgtype.Text
+	ID          pgtype.UUID
+	Title       pgtype.Text
+	Content     pgtype.Text
+	Description pgtype.Text
+	Thumbnail   pgtype.Text
 }
 
 func (q *Queries) UpdatePost(ctx context.Context, arg UpdatePostParams) (Post, error) {
-	row := q.db.QueryRow(ctx, updatePost, arg.ID, arg.Title, arg.Content)
+	row := q.db.QueryRow(ctx, updatePost,
+		arg.ID,
+		arg.Title,
+		arg.Content,
+		arg.Description,
+		arg.Thumbnail,
+	)
 	var i Post
 	err := row.Scan(
-		&i.IsDelete,
 		&i.CreateTime,
 		&i.UpdateTime,
 		&i.ID,
 		&i.Title,
 		&i.Content,
+		&i.Thumbnail,
+		&i.Description,
+		&i.Status,
+	)
+	return i, err
+}
+
+const updatePostStatus = `-- name: UpdatePostStatus :one
+UPDATE posts
+SET
+    status = $2,
+    update_time = now()
+WHERE id = $1
+RETURNING create_time, update_time, id, title, content, thumbnail, description, status
+`
+
+type UpdatePostStatusParams struct {
+	ID     pgtype.UUID
+	Status int32
+}
+
+func (q *Queries) UpdatePostStatus(ctx context.Context, arg UpdatePostStatusParams) (Post, error) {
+	row := q.db.QueryRow(ctx, updatePostStatus, arg.ID, arg.Status)
+	var i Post
+	err := row.Scan(
+		&i.CreateTime,
+		&i.UpdateTime,
+		&i.ID,
+		&i.Title,
+		&i.Content,
+		&i.Thumbnail,
+		&i.Description,
+		&i.Status,
 	)
 	return i, err
 }

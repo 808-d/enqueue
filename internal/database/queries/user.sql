@@ -6,16 +6,17 @@ SELECT * FROM users WHERE is_delete = false and role = 'user' ORDER BY id;
 
 -- name: CreateUser :one
 INSERT INTO users
-(id, username, email, password, role, is_delete, email_verified, create_time)
-VALUES (gen_random_uuid(), $1, $2, $3, 'user', false, false,now())
+(id, username, email, password,name, role, is_delete, email_verified, create_time)
+VALUES (gen_random_uuid(), $1, $2, $3, $4,'user', false, false,now())
 RETURNING id;
 -- name: UpdateUser :one
 UPDATE users
 SET 
 username = $2,
 email = $3,
-avatar = $4,
-password = $5,
+name = $4,
+avatar = $5,
+password = $6,
 update_time = now()
 WHERE id = $1 AND is_delete = false
 RETURNING *;
