@@ -25,8 +25,8 @@ func (q *Queries) CheckVerify(ctx context.Context, token string) (pgtype.UUID, e
 
 const createUser = `-- name: CreateUser :one
 INSERT INTO users
-(id, username, email, password, role, is_delete, email_verified, create_time)
-VALUES (gen_random_uuid(), $1, $2, $3, 'user', false, false,now())
+(id, username, email, password,name, role, is_delete, email_verified, create_time)
+VALUES (gen_random_uuid(), $1, $2, $3, $4,'user', false, false,now())
 RETURNING id
 `
 
@@ -34,10 +34,16 @@ type CreateUserParams struct {
 	Username string
 	Email    string
 	Password pgtype.Text
+	Name     pgtype.Text
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (pgtype.UUID, error) {
-	row := q.db.QueryRow(ctx, createUser, arg.Username, arg.Email, arg.Password)
+	row := q.db.QueryRow(ctx, createUser,
+		arg.Username,
+		arg.Email,
+		arg.Password,
+		arg.Name,
+	)
 	var id pgtype.UUID
 	err := row.Scan(&id)
 	return id, err
@@ -66,7 +72,7 @@ func (q *Queries) DeleteUser(ctx context.Context, id pgtype.UUID) error {
 }
 
 const getUser = `-- name: GetUser :one
-SELECT is_delete, create_time, update_time, id, username, email, avatar, password, role, email_verified FROM users WHERE id = $1 AND is_delete = false LIMIT 1
+SELECT is_delete, create_time, update_time, id, username, email, avatar, password, role, email_verified, bio, name FROM users WHERE id = $1 AND is_delete = false LIMIT 1
 `
 
 func (q *Queries) GetUser(ctx context.Context, id pgtype.UUID) (User, error) {
@@ -83,12 +89,14 @@ func (q *Queries) GetUser(ctx context.Context, id pgtype.UUID) (User, error) {
 		&i.Password,
 		&i.Role,
 		&i.EmailVerified,
+		&i.Bio,
+		&i.Name,
 	)
 	return i, err
 }
 
 const getUserByUsernameAndPassword = `-- name: GetUserByUsernameAndPassword :one
-SELECT is_delete, create_time, update_time, id, username, email, avatar, password, role, email_verified FROM users
+SELECT is_delete, create_time, update_time, id, username, email, avatar, password, role, email_verified, bio, name FROM users
 WHERE username = $1 AND password = $2 AND is_delete = false LIMIT 1
 `
 
@@ -111,12 +119,14 @@ func (q *Queries) GetUserByUsernameAndPassword(ctx context.Context, arg GetUserB
 		&i.Password,
 		&i.Role,
 		&i.EmailVerified,
+		&i.Bio,
+		&i.Name,
 	)
 	return i, err
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT is_delete, create_time, update_time, id, username, email, avatar, password, role, email_verified FROM users WHERE is_delete = false and role = 'user' ORDER BY id
+SELECT is_delete, create_time, update_time, id, username, email, avatar, password, role, email_verified, bio, name FROM users WHERE is_delete = false and role = 'user' ORDER BY id
 `
 
 func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
@@ -139,6 +149,8 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 			&i.Password,
 			&i.Role,
 			&i.EmailVerified,
+			&i.Bio,
+			&i.Name,
 		); err != nil {
 			return nil, err
 		}
@@ -155,17 +167,19 @@ UPDATE users
 SET 
 username = $2,
 email = $3,
-avatar = $4,
-password = $5,
+name = $4,
+avatar = $5,
+password = $6,
 update_time = now()
 WHERE id = $1 AND is_delete = false
-RETURNING is_delete, create_time, update_time, id, username, email, avatar, password, role, email_verified
+RETURNING is_delete, create_time, update_time, id, username, email, avatar, password, role, email_verified, bio, name
 `
 
 type UpdateUserParams struct {
 	ID       pgtype.UUID
 	Username string
 	Email    string
+	Name     pgtype.Text
 	Avatar   pgtype.Text
 	Password pgtype.Text
 }
@@ -175,6 +189,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		arg.ID,
 		arg.Username,
 		arg.Email,
+		arg.Name,
 		arg.Avatar,
 		arg.Password,
 	)
@@ -190,6 +205,8 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.Password,
 		&i.Role,
 		&i.EmailVerified,
+		&i.Bio,
+		&i.Name,
 	)
 	return i, err
 }

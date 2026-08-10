@@ -20,6 +20,7 @@ import { endpoints } from "../utils/endpoints";
 export default function Signup() {
   const [signUpState, setSignUpState] = useState({
     username: "",
+    name: "",
     email: "",
     password: "",
     confirmPassword: "",
@@ -115,6 +116,27 @@ export default function Signup() {
               </Box>
               <Box component="form" onSubmit={signUp}>
                 <Stack spacing={2}>
+                  <TextField
+                    label="Name"
+                    variant="filled"
+                    fullWidth
+                    slotProps={{
+                      inputLabel: {
+                        sx: {
+                          color: catppuccin.subtext1,
+                        },
+                      },
+                    }}
+                    required
+                    sx={textFieldStyle}
+                    value={signUpState.username}
+                    onChange={(e) =>
+                      setSignUpState({
+                        ...signUpState,
+                        name: e.target.value,
+                      })
+                    }
+                  />
                   <TextField
                     label="Username"
                     variant="filled"

@@ -1,0 +1,17 @@
+ALTER TABLE comments
+DROP COLUMN reply_to;
+
+ALTER TABLE users
+DROP COLUMN name,
+DROP COLUMN bio;
+
+ALTER TABLE posts
+DROP CONSTRAINT posts_status_check;
+
+ALTER TABLE posts
+DROP COLUMN status,
+DROP COLUMN description,
+DROP COLUMN thumbnail;
+
+ALTER TABLE posts
+ADD COLUMN is_delete BOOLEAN NOT NULL DEFAULT FALSE;

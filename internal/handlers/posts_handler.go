@@ -63,11 +63,16 @@ func (h *PostsHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := h.postService.DeletePost(r.Context(), req)
+	post, err := h.postService.DeletePost(r.Context(), req)
 	if err != nil {
 		http.Error(w, "failed to delete post", http.StatusInternalServerError)
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	if err := json.NewEncoder(w).Encode(post); err != nil {
+		return
+	}
 }
