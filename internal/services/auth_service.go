@@ -10,6 +10,8 @@ import (
 	"os"
 	"time"
 
+	"enqueue/internal/structs"
+
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -32,13 +34,6 @@ func (s *AuthService) ValidateSignUpRequest(context context.Context, username st
 		return false, err
 	}
 	return !isExists, nil
-}
-
-type Claims struct {
-	UserID   int    `json:"user_id"`
-	Username string `json:"username"`
-	Role     string `json:"role"`
-	jwt.RegisteredClaims
 }
 
 func NewAuthService(pool *pgxpool.Pool) *AuthService {
@@ -66,14 +61,15 @@ func (s *AuthService) GetToken(
 		return "", errors.New("invalid username or password")
 
 	}
-	return GenerateToken(user.Username, user.Avatar.String, user.Email, user.Role)
+	return GenerateToken(user.ID.String(), user.Username, user.Avatar.String, user.Email, user.Role)
 
 }
 
-func GenerateToken(username, avatar, email, role string) (string, error) {
+func GenerateToken(userId, username, avatar, email, role string) (string, error) {
 	key := []byte(os.Getenv("JWT_SECRET"))
-
+	log.Printf("UserID: %s", userId)
 	claims := jwt.MapClaims{
+		"id":       userId,
 		"username": username,
 		"avatar":   avatar,
 		"email":    email,
@@ -185,27 +181,14 @@ func (s *AuthService) Verify(ctx context.Context, token string) (bool, error) {
 	return true, nil
 }
 
-func (s *AuthService) DecodeToken(tokenString string) (*Claims, error) {
-	token, err := jwt.ParseWithClaims(
-		tokenString,
-		&Claims{},
-		func(token *jwt.Token) (any, error) {
-			return []byte(os.Getenv("JWT_SECRET")), nil
-		},
-	)
-
+func (s *AuthService) DecodeToken(tokenString string) (*structs.Claims, error) {
+	token, err := utils.ValidateToken(tokenString)
 	if err != nil {
 		return nil, err
 	}
 
-	if !token.Valid {
+	if err != nil {
 		return nil, errors.New("invalid token")
 	}
-
-	claims, ok := token.Claims.(*Claims)
-	if !ok {
-		return nil, errors.New("invalid claims")
-	}
-
-	return claims, nil
+	return token, err
 }

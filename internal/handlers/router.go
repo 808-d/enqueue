@@ -1,7 +1,10 @@
 // internal/handler/router.go
 package handlers
 
-import "net/http"
+import (
+	"enqueue/internal/middlewares"
+	"net/http"
+)
 
 func RegisterUserRoutes(mux *http.ServeMux, h *UsersHandler) {
 	mux.HandleFunc("GET /users", h.GetUsers)
@@ -10,9 +13,9 @@ func RegisterUserRoutes(mux *http.ServeMux, h *UsersHandler) {
 }
 func RegisterPostRoutes(mux *http.ServeMux, h *PostsHandler) {
 	mux.HandleFunc("GET /posts", h.GetPosts)
-	mux.HandleFunc("POST /posts", h.CreatePost)
-	mux.HandleFunc("PUT /posts", h.UpdatePost)
-	mux.HandleFunc("DELETE /posts", h.DeletePost)
+	mux.Handle("POST /posts", middlewares.AuthMiddleware(http.HandlerFunc(h.CreatePost)))
+	mux.Handle("PUT /posts", middlewares.AuthMiddleware(http.HandlerFunc(h.UpdatePost)))
+	mux.Handle("DELETE /posts", middlewares.AuthMiddleware(http.HandlerFunc(h.DeletePost)))
 }
 
 func RegisterAuthRoutes(mux *http.ServeMux, h *AuthHandler) {

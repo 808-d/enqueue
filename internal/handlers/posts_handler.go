@@ -22,13 +22,12 @@ func (h *PostsHandler) GetPosts(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *PostsHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
-	var req posts.CreatePostRequest
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+	userId, ok := r.Context().Value("id").(uuid.UUID)
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-	post, err := h.postService.CreatePost(r.Context(), req.Title, req.Content)
+	post, err := h.postService.CreatePost(r.Context(), userId)
 	if err != nil {
 		http.Error(w, "failed to create post", http.StatusInternalServerError)
 		return

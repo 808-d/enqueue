@@ -32,7 +32,7 @@ type Compose struct {
 	UserID     pgtype.UUID
 	PostID     pgtype.UUID
 	CreateTime pgtype.Timestamp
-	UpdateTime pgtype.Timestamp
+	Role       string
 }
 
 type EmailVerification struct {

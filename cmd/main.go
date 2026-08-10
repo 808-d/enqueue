@@ -34,7 +34,7 @@ func main() {
 	userService := services.NewUserService(queries)
 	usersHandler := handlers.NewUsersHandler(userService)
 
-	postService := services.NewPostService(queries)
+	postService := services.NewPostService(pool)
 	postsHandler := handlers.NewPostsHandler(postService)
 
 	authService := services.NewAuthService(pool)

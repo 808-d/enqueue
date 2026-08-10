@@ -53,3 +53,8 @@ WHERE (token = $1 AND expires_at < now());
 -- name: DeleteToken :exec
 DELETE FROM email_verifications
 WHERE "token"= $1;
+
+
+-- name: GetUserIdByUsername :one
+SELECT id FROM users
+WHERE username = $1 AND is_delete = false LIMIT 1;

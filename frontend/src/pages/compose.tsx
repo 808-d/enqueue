@@ -191,7 +191,7 @@ const Compose = (postId: string) => {
     content: "<p></p>",
   });
   const { uploadImage, uploading } = useCloudinary();
-  const { updatePostStatus } = usePosts();
+  const { updatePostStatus, updatePost } = usePosts();
   if (!editor) {
     return null;
   }
@@ -230,11 +230,17 @@ const Compose = (postId: string) => {
 
   const [title, setTitle] = useState("No title");
 
-  const saveDraft = () => {
-    updatePostStatus(postId, 2);
-  };
   const publish = () => {
     updatePostStatus(postId, 1);
+  };
+
+  const handleUpdatePost = async (id: string, status: number) => {
+    try {
+      const content = editor?.getText();
+      await updatePost(id, content, status);
+    } catch {
+      alert();
+    }
   };
 
   return (
@@ -290,6 +296,7 @@ const Compose = (postId: string) => {
                 color: catppuccin.text,
                 borderColor: catppuccin.surface1,
               }}
+              onClick={() => handleUpdatePost(postId, 2)}
             >
               Save Draft
             </Button>

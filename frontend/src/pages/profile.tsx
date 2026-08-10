@@ -10,6 +10,7 @@ import {
   Menu,
   MenuItem,
   Paper,
+  Snackbar,
   Typography,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
@@ -26,8 +27,12 @@ import { useState } from "react";
 import NotesIcon from "@mui/icons-material/Notes";
 import ShortTextIcon from "@mui/icons-material/ShortText";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
+import { usePosts } from "../hooks/usePosts";
+import { Alert } from "@mui/material";
 export function Profile() {
   const { user } = useAuth();
+  const { createPost } = usePosts();
+  const [error, setError] = useState(false);
   const [createAnchorEl, setCreateAnchorEl] = useState<null | HTMLElement>(
     null,
   );
@@ -74,6 +79,13 @@ export function Profile() {
     },
   ];
 
+  const handleCreate = async () => {
+    try {
+      await createPost();
+    } catch {
+      setError(true);
+    }
+  };
   if (!user) {
     return null;
   }
@@ -195,7 +207,6 @@ export function Profile() {
                   >
                     Followers
                   </Typography>
-                  createPost, getPostsByUser,
                 </Box>
 
                 <Box>
@@ -268,6 +279,7 @@ export function Profile() {
                               },
                             },
                           }}
+                          onClick={handleCreate}
                         />
                       </MenuItem>
 
@@ -526,6 +538,19 @@ export function Profile() {
         </Box>
       </Grid>
       <Right />
+      <Snackbar
+        open={error}
+        autoHideDuration={4000}
+        onClose={() => setError(false)}
+      >
+        <Alert
+          severity="error"
+          variant="filled"
+          onClose={() => setError(false)}
+        >
+          Failed to create post
+        </Alert>
+      </Snackbar>
     </Grid>
   );
 }

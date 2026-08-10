@@ -1,23 +1,51 @@
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import { endpoints } from "../utils/endpoints";
 
 export function usePosts() {
-  function getPostsByUser(userId: string) {}
+  const navigate = useNavigate();
 
-  function updatePostStatus(id: string, status: number) {
-    return async () => {
-      await axios.post(endpoints.posts, {
-        id,
-        status,
-      });
-    };
+  function getPostsByUser(userId: string) {
+    // ...
   }
 
-  function createPost(userId: string) {
-    return async () => {
-      await axios.post(endpoints.posts);
-    };
+  async function updatePostStatus(id: string, status: number) {
+    await axios.patch(endpoints.posts, {
+      id,
+      status,
+    });
+  }
+  async function updatePost(id: string, content: string, status: number) {
+    await axios.patch(endpoints.posts, {
+      id,
+      content,
+      status,
+    });
   }
 
-  return { getPostsByUser, updatePostStatus, createPost };
+  async function createPost() {
+    try {
+      const response = await axios.post(
+        endpoints.posts,
+        {},
+        {
+          withCredentials: true,
+        },
+      );
+
+      const post = response.data;
+
+      navigate(`/compose?id=${post.ID}`);
+    } catch (error) {
+      console.error("Failed to create post:", error);
+      throw error;
+    }
+  }
+
+  return {
+    getPostsByUser,
+    updatePostStatus,
+    createPost,
+    updatePost,
+  };
 }
