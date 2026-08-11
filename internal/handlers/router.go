@@ -13,9 +13,11 @@ func RegisterUserRoutes(mux *http.ServeMux, h *UsersHandler) {
 }
 func RegisterPostRoutes(mux *http.ServeMux, h *PostsHandler) {
 	mux.HandleFunc("GET /posts", h.GetPosts)
+	mux.HandleFunc("GET /posts/p/{id}", h.GetPostsByUser)
+	mux.HandleFunc("GET /posts/{id}", h.GetPostById)
 	mux.Handle("POST /posts", middlewares.AuthMiddleware(http.HandlerFunc(h.CreatePost)))
-	mux.Handle("PUT /posts", middlewares.AuthMiddleware(http.HandlerFunc(h.UpdatePost)))
-	mux.Handle("DELETE /posts", middlewares.AuthMiddleware(http.HandlerFunc(h.DeletePost)))
+	mux.Handle("PATCH /posts", middlewares.AuthMiddleware(http.HandlerFunc(h.UpdatePost)))
+	mux.Handle("PATCH /posts/{id}", middlewares.AuthMiddleware(http.HandlerFunc(h.DeletePost)))
 }
 
 func RegisterAuthRoutes(mux *http.ServeMux, h *AuthHandler) {

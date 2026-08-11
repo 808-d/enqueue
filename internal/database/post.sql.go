@@ -13,12 +13,12 @@ import (
 
 const createPost = `-- name: CreatePost :one
 INSERT INTO posts (
-    id,
-    status
+  id,
+  status
 )
 VALUES (
-    gen_random_uuid(),
-    1
+  gen_random_uuid(),
+  1
 )
 RETURNING create_time, update_time, id, title, content, thumbnail, description, status
 `
@@ -39,14 +39,71 @@ func (q *Queries) CreatePost(ctx context.Context) (Post, error) {
 	return i, err
 }
 
+const getPostById = `-- name: GetPostById :one
+SELECT create_time, update_time, id, title, content, thumbnail, description, status FROM POSTS WHERE Id = $1 AND STATUS <> 0
+`
+
+func (q *Queries) GetPostById(ctx context.Context, id pgtype.UUID) (Post, error) {
+	row := q.db.QueryRow(ctx, getPostById, id)
+	var i Post
+	err := row.Scan(
+		&i.CreateTime,
+		&i.UpdateTime,
+		&i.ID,
+		&i.Title,
+		&i.Content,
+		&i.Thumbnail,
+		&i.Description,
+		&i.Status,
+	)
+	return i, err
+}
+
+const getPostsByUser = `-- name: GetPostsByUser :many
+SELECT p.create_time, p.update_time, p.id, p.title, p.content, p.thumbnail, p.description, p.status FROM posts p
+INNER JOIN composes c 
+ON p.id = c.post_id 
+WHERE c.user_id  = $1 AND p.status <> 0
+ORDER BY p.id, p.create_time
+`
+
+func (q *Queries) GetPostsByUser(ctx context.Context, userID pgtype.UUID) ([]Post, error) {
+	rows, err := q.db.Query(ctx, getPostsByUser, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Post
+	for rows.Next() {
+		var i Post
+		if err := rows.Scan(
+			&i.CreateTime,
+			&i.UpdateTime,
+			&i.ID,
+			&i.Title,
+			&i.Content,
+			&i.Thumbnail,
+			&i.Description,
+			&i.Status,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updatePost = `-- name: UpdatePost :one
 UPDATE posts
 SET
-    update_time = now(),
-    title = $2,
-    content = $3,
-    description = $4,
-    thumbnail = $5
+update_time = now(),
+title = $2,
+content = $3,
+description = $4,
+thumbnail = $5
 WHERE id = $1
 RETURNING create_time, update_time, id, title, content, thumbnail, description, status
 `
@@ -84,8 +141,8 @@ func (q *Queries) UpdatePost(ctx context.Context, arg UpdatePostParams) (Post, e
 const updatePostStatus = `-- name: UpdatePostStatus :one
 UPDATE posts
 SET
-    status = $2,
-    update_time = now()
+status = $2,
+update_time = now()
 WHERE id = $1
 RETURNING create_time, update_time, id, title, content, thumbnail, description, status
 `

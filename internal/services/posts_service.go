@@ -56,15 +56,16 @@ func (s *PostService) DeletePost(ctx context.Context, postId uuid.UUID) (databas
 	return s.repo.UpdatePostStatus(ctx, database.UpdatePostStatusParams{
 		ID: pgtype.UUID{
 			Bytes: postId,
+			Valid: true,
 		},
 		Status: 0,
 	})
 }
 
-func (s *PostService) UpdatePost(ctx context.Context, postId uuid.UUID, title string, content string) (database.Post, error) {
+func (s *PostService) UpdatePost(ctx context.Context, id uuid.UUID, title string, content string) (database.Post, error) {
 	return s.repo.UpdatePost(ctx, database.UpdatePostParams{
 		ID: pgtype.UUID{
-			Bytes: postId,
+			Bytes: id,
 			Valid: true,
 		},
 		Title: pgtype.Text{
@@ -76,4 +77,38 @@ func (s *PostService) UpdatePost(ctx context.Context, postId uuid.UUID, title st
 			Valid:  true,
 		},
 	})
+}
+
+func (s *PostService) GetPostsByUser(ctx context.Context, userId uuid.UUID) ([]database.Post, error) {
+	posts, err := s.repo.GetPostsByUser(ctx, pgtype.UUID{
+		Bytes: userId,
+		Valid: true,
+	})
+	if err != nil {
+		return []database.Post{}, err
+	}
+	return posts, err
+}
+func (s *PostService) GetPostById(ctx context.Context, postId uuid.UUID) (database.Post, error) {
+	posts, err := s.repo.GetPostById(ctx, pgtype.UUID{
+		Bytes: postId,
+		Valid: true,
+	})
+	if err != nil {
+		return database.Post{}, err
+	}
+	return posts, err
+}
+
+func (s *PostService) UpdatePostStatus(ctx context.Context, postId uuid.UUID) (database.Post, error) {
+	posts, err := s.repo.UpdatePostStatus(ctx, database.UpdatePostStatusParams{
+		ID: pgtype.UUID{
+			Bytes: postId,
+			Valid: true,
+		},
+	})
+	if err != nil {
+		return database.Post{}, err
+	}
+	return posts, err
 }

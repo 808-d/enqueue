@@ -1,7 +1,7 @@
 import "./App.css";
 import Home from "./pages/home";
 import Login from "./pages/login";
-import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Signup from "./pages/signup";
 import Verify from "./pages/verify";
 import { Profile } from "./pages/profile";

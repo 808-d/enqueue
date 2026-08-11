@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import {
+  Alert,
   Box,
   Button,
   Divider,
@@ -9,6 +10,7 @@ import {
   MenuItem,
   Popover,
   Select,
+  Snackbar,
   Stack,
   TextField,
   Tooltip,
@@ -50,6 +52,10 @@ import { catppuccin } from "../theme/catppuccinMocha";
 import Link from "@tiptap/extension-link";
 import { useCloudinary } from "../hooks/useCloudinary";
 import { usePosts } from "../hooks/usePosts";
+import { useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import enqueueLogo from "../assets/enqueue.svg";
+import type { Post } from "../models/post";
 const colors = [
   "#cba6f7",
   "#f38ba8",
@@ -73,13 +79,34 @@ const highlights = [
   "#cba6f7",
 ];
 
-const Compose = (postId: string) => {
+const Compose = () => {
   const [colorAnchor, setColorAnchor] = useState<null | HTMLElement>(null);
 
   const [highlightAnchor, setHighlightAnchor] = useState<null | HTMLElement>(
     null,
   );
   const [emojiAnchor, setEmojiAnchor] = useState<HTMLElement | null>(null);
+  const [searchParams] = useSearchParams();
+
+  const postId = searchParams.get("id");
+  const [post, setPost] = useState<Post>();
+
+  useEffect(() => {
+    if (!postId) return;
+
+    const fetchPost = async () => {
+      try {
+        const response = await getPostById(postId);
+        if (response) {
+          setPost(response);
+        }
+      } catch (err) {
+        console.error("Failed to get post:", err);
+      }
+    };
+
+    fetchPost();
+  }, [postId]);
 
   const editor = useEditor({
     extensions: [
@@ -187,15 +214,25 @@ const Compose = (postId: string) => {
         },
       }),
     ],
-
-    content: "<p></p>",
+    // content: post ? `<p>${post.Content}</p>` : "",
   });
+  useEffect(() => {
+    if (!editor || !post) return;
+
+    editor.commands.setContent(post.Content);
+  }, [editor, post]);
   const { uploadImage, uploading } = useCloudinary();
-  const { updatePostStatus, updatePost } = usePosts();
+  const { updatePost, getPostById } = usePosts();
+  const navigate = useNavigate();
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "success" as "success" | "error",
+  });
+
   if (!editor) {
     return null;
   }
-
   const toggleColorMenu = (event: React.MouseEvent<HTMLButtonElement>) => {
     setColorAnchor(event.currentTarget);
   };
@@ -230,16 +267,25 @@ const Compose = (postId: string) => {
 
   const [title, setTitle] = useState("No title");
 
-  const publish = () => {
-    updatePostStatus(postId, 1);
-  };
-
   const handleUpdatePost = async (id: string, status: number) => {
     try {
-      const content = editor?.getText();
-      await updatePost(id, content, status);
-    } catch {
-      alert();
+      const content = editor!.getText();
+
+      await updatePost(id, title, content, status);
+
+      if (status === 1) {
+        setSnackbar({
+          open: true,
+          message: "Draft saved successfully",
+          severity: "success",
+        });
+      }
+    } catch (err) {
+      setSnackbar({
+        open: true,
+        message: "Failed to save draft",
+        severity: "error",
+      });
     }
   };
 
@@ -252,6 +298,17 @@ const Compose = (postId: string) => {
         py: 4,
       }}
     >
+      <Button
+        variant="text"
+        onClick={() => navigate("/")}
+        sx={{
+          textTransform: "none",
+          width: "fit-content",
+          float: "left",
+        }}
+      >
+        <img src={enqueueLogo} alt="Enqueue" style={{ width: "50px" }} />
+      </Button>
       <Box
         sx={{
           maxWidth: 1000,
@@ -296,7 +353,7 @@ const Compose = (postId: string) => {
                 color: catppuccin.text,
                 borderColor: catppuccin.surface1,
               }}
-              onClick={() => handleUpdatePost(postId, 2)}
+              onClick={() => handleUpdatePost(postId!, 2)}
             >
               Save Draft
             </Button>
@@ -870,6 +927,33 @@ const Compose = (postId: string) => {
           </Box>
         </Box>
       </Box>
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={() =>
+          setSnackbar((prev) => ({
+            ...prev,
+            open: false,
+          }))
+        }
+        anchorOrigin={{
+          vertical: "top",
+          horizontal: "right",
+        }}
+      >
+        <Alert
+          severity={snackbar.severity}
+          variant="filled"
+          onClose={() =>
+            setSnackbar((prev) => ({
+              ...prev,
+              open: false,
+            }))
+          }
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

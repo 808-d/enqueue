@@ -1,6 +1,6 @@
 import { Box, Button, Grid, Stack } from "@mui/material";
 import { useAuth } from "../../contexts/authContext";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import HomeFilledIcon from "@mui/icons-material/HomeFilled";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import TurnedInIcon from "@mui/icons-material/TurnedIn";
@@ -12,7 +12,6 @@ import LoginIcon from "@mui/icons-material/Login";
 
 export function Left() {
   const { user, loading } = useAuth();
-
   if (loading) {
     return null;
   }
@@ -89,7 +88,7 @@ export function Left() {
           {user ? (
             <Button
               component={Link}
-              to="/profile"
+              to={`/profile?id=${user.id}`}
               startIcon={<Person />}
               sx={{
                 justifyContent: "flex-start",
