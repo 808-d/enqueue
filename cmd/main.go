@@ -40,10 +40,14 @@ func main() {
 	authService := services.NewAuthService(pool)
 	authHandler := handlers.NewAuthHandler(authService)
 
+	commentService := services.NewCommentService(queries)
+	commentHandler := handlers.NewCommentssHandler(commentService)
+
 	mux := http.NewServeMux()
 	handlers.RegisterUserRoutes(mux, usersHandler)
 	handlers.RegisterPostRoutes(mux, postsHandler)
 	handlers.RegisterAuthRoutes(mux, authHandler)
+	handlers.RegisterCommentsRoutes(mux, commentHandler)
 
 	// middlewares
 	c := cors.New(cors.Options{

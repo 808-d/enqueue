@@ -19,11 +19,15 @@ export function usePosts() {
   }
 
   async function updatePostStatus(id: string) {
-    await axios.patch(`${endpoints.posts}/${id}`, {
-      id,
-    }, {
-      withCredentials: true
-    });
+    await axios.patch(
+      `${endpoints.posts}/${id}`,
+      {
+        id,
+      },
+      {
+        withCredentials: true,
+      },
+    );
   }
 
   async function updatePost(
@@ -35,13 +39,13 @@ export function usePosts() {
     const response = await axios.patch(
       endpoints.posts,
       {
-	id,
-	title,
-	content,
-	status,
+        id,
+        title,
+        content,
+        status,
       },
       {
-	withCredentials: true,
+        withCredentials: true,
       },
     );
     return response;
@@ -50,11 +54,11 @@ export function usePosts() {
   async function createPost() {
     try {
       const response = await axios.post(
-	endpoints.posts,
-	{},
-	{
-	  withCredentials: true,
-	},
+        endpoints.posts,
+        {},
+        {
+          withCredentials: true,
+        },
       );
 
       const post = response.data;

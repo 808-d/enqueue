@@ -26,3 +26,9 @@ func RegisterAuthRoutes(mux *http.ServeMux, h *AuthHandler) {
 	mux.HandleFunc("POST /verify", h.Verify)
 	mux.HandleFunc("GET /me", h.Me)
 }
+func RegisterCommentsRoutes(mux *http.ServeMux, h *CommentsHandler) {
+	// mux.HandleFunc("GET /comments", h.Login)
+	mux.Handle("POST /comments", middlewares.AuthMiddleware(http.HandlerFunc(h.CreateComment)))
+	mux.HandleFunc("PATCH /comments", h.UpdateComment)
+	mux.HandleFunc("PATCH /comments/{id}", h.DeleteComment)
+}
