@@ -22,9 +22,10 @@ type Comment struct {
 	IsDelete   bool
 	CreateTime pgtype.Timestamp
 	UpdateTime pgtype.Timestamp
+	ID         pgtype.UUID
 	UserID     pgtype.UUID
 	PostID     pgtype.UUID
-	Cotent     pgtype.Text
+	Content    string
 	ReplyTo    pgtype.UUID
 }
 
@@ -32,7 +33,7 @@ type Compose struct {
 	UserID     pgtype.UUID
 	PostID     pgtype.UUID
 	CreateTime pgtype.Timestamp
-	UpdateTime pgtype.Timestamp
+	Role       string
 }
 
 type EmailVerification struct {

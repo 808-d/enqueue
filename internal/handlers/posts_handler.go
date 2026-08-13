@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"enqueue/internal/dtos/posts"
 	"enqueue/internal/services"
+	"log"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -20,15 +21,30 @@ func NewPostsHandler(postService *services.PostService) *PostsHandler {
 func (h *PostsHandler) GetPosts(w http.ResponseWriter, r *http.Request) {
 
 }
-
-func (h *PostsHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
-	var req posts.CreatePostRequest
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+func (h *PostsHandler) GetPostsByUser(w http.ResponseWriter, r *http.Request) {
+	userID, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "invalid user id", http.StatusBadRequest)
 		return
 	}
-	post, err := h.postService.CreatePost(r.Context(), req.Title, req.Content)
+
+	post, err := h.postService.GetPostsByUser(r.Context(), userID)
+	if err != nil {
+		http.Error(w, "failed to create post", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(post)
+}
+
+func (h *PostsHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
+	userId, ok := r.Context().Value("id").(uuid.UUID)
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	post, err := h.postService.CreatePost(r.Context(), userId)
 	if err != nil {
 		http.Error(w, "failed to create post", http.StatusInternalServerError)
 		return
@@ -56,14 +72,56 @@ func (h *PostsHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(updatedPost)
 }
 func (h *PostsHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
-	var req uuid.UUID
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+	postId, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "invalid user id", http.StatusBadRequest)
 		return
 	}
 
-	post, err := h.postService.DeletePost(r.Context(), req)
+	post, err := h.postService.DeletePost(r.Context(), postId)
+	if err != nil {
+		log.Printf("failed to delete post %s: %v", postId, err)
+		http.Error(w, "failed to delete post", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	if err := json.NewEncoder(w).Encode(post); err != nil {
+		return
+	}
+}
+
+func (h *PostsHandler) GetPostById(w http.ResponseWriter, r *http.Request) {
+	postId, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "invalid post id", http.StatusBadRequest)
+		return
+	}
+
+	post, err := h.postService.GetPostById(r.Context(), postId)
+	if err != nil {
+		http.Error(w, "failed to delete post", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	if err := json.NewEncoder(w).Encode(post); err != nil {
+		return
+	}
+}
+
+func (h *PostsHandler) UpdatePostStatus(w http.ResponseWriter, r *http.Request) {
+	postId, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "invalid post id", http.StatusBadRequest)
+		return
+	}
+
+	post, err := h.postService.GetPostById(r.Context(), postId)
 	if err != nil {
 		http.Error(w, "failed to delete post", http.StatusInternalServerError)
 		return

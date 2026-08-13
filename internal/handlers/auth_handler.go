@@ -102,6 +102,7 @@ func (h *AuthHandler) Verify(w http.ResponseWriter, r *http.Request) {
 func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("token")
 	if err != nil {
+		log.Printf("Error: %v\n", err)
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}

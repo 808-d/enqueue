@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
+  Alert,
   Box,
   Button,
   Divider,
@@ -9,12 +10,11 @@ import {
   MenuItem,
   Popover,
   Select,
-  Stack,
-  TextField,
+  Snackbar,
   Tooltip,
 } from "@mui/material";
 
-import { useEditor, EditorContent, Editor } from "@tiptap/react";
+import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 
 import Underline from "@tiptap/extension-underline";
@@ -35,8 +35,6 @@ import FormatListBulletedIcon from "@mui/icons-material/FormatListBulleted";
 import FormatListNumberedIcon from "@mui/icons-material/FormatListNumbered";
 import FormatQuoteIcon from "@mui/icons-material/FormatQuote";
 import CodeIcon from "@mui/icons-material/Code";
-import LinkIcon from "@mui/icons-material/Link";
-import LinkOffIcon from "@mui/icons-material/LinkOff";
 import HorizontalRuleIcon from "@mui/icons-material/HorizontalRule";
 import UndoIcon from "@mui/icons-material/Undo";
 import RedoIcon from "@mui/icons-material/Redo";
@@ -50,6 +48,11 @@ import { catppuccin } from "../theme/catppuccinMocha";
 import Link from "@tiptap/extension-link";
 import { useCloudinary } from "../hooks/useCloudinary";
 import { usePosts } from "../hooks/usePosts";
+import { useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import enqueueLogo from "../assets/enqueue.svg";
+import type { Post } from "../models/post";
+import { LinkWidget } from "../components/shared/linkWidget";
 const colors = [
   "#cba6f7",
   "#f38ba8",
@@ -73,13 +76,34 @@ const highlights = [
   "#cba6f7",
 ];
 
-const Compose = (postId: string) => {
+const Compose = () => {
   const [colorAnchor, setColorAnchor] = useState<null | HTMLElement>(null);
 
   const [highlightAnchor, setHighlightAnchor] = useState<null | HTMLElement>(
     null,
   );
   const [emojiAnchor, setEmojiAnchor] = useState<HTMLElement | null>(null);
+  const [searchParams] = useSearchParams();
+
+  const postId = searchParams.get("id");
+  const [post, setPost] = useState<Post>();
+
+  useEffect(() => {
+    if (!postId) return;
+
+    const fetchPost = async () => {
+      try {
+        const response = await getPostById(postId);
+        if (response) {
+          setPost(response);
+        }
+      } catch (err) {
+        console.error("Failed to get post:", err);
+      }
+    };
+
+    fetchPost();
+  }, [postId]);
 
   const editor = useEditor({
     extensions: [
@@ -187,15 +211,25 @@ const Compose = (postId: string) => {
         },
       }),
     ],
-
-    content: "<p></p>",
+    // content: post ? `<p>${post.Content}</p>` : "",
   });
-  const { uploadImage, uploading } = useCloudinary();
-  const { updatePostStatus } = usePosts();
+  useEffect(() => {
+    if (!editor || !post) return;
+
+    editor.commands.setContent(post.Content);
+  }, [editor, post]);
+  const { uploadImage } = useCloudinary();
+  const { updatePost, getPostById } = usePosts();
+  const navigate = useNavigate();
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "success" as "success" | "error",
+  });
+
   if (!editor) {
     return null;
   }
-
   const toggleColorMenu = (event: React.MouseEvent<HTMLButtonElement>) => {
     setColorAnchor(event.currentTarget);
   };
@@ -230,11 +264,26 @@ const Compose = (postId: string) => {
 
   const [title, setTitle] = useState("No title");
 
-  const saveDraft = () => {
-    updatePostStatus(postId, 2);
-  };
-  const publish = () => {
-    updatePostStatus(postId, 1);
+  const handleUpdatePost = async (id: string, status: number) => {
+    try {
+      const content = editor!.getText();
+
+      await updatePost(id, title, content, status);
+
+      if (status === 1) {
+        setSnackbar({
+          open: true,
+          message: "Draft saved successfully",
+          severity: "success",
+        });
+      }
+    } catch (err) {
+      setSnackbar({
+        open: true,
+        message: "Failed to save draft",
+        severity: "error",
+      });
+    }
   };
 
   return (
@@ -246,6 +295,17 @@ const Compose = (postId: string) => {
         py: 4,
       }}
     >
+      <Button
+        variant="text"
+        onClick={() => navigate("/")}
+        sx={{
+          textTransform: "none",
+          width: "fit-content",
+          float: "left",
+        }}
+      >
+        <img src={enqueueLogo} alt="Enqueue" style={{ width: "50px" }} />
+      </Button>
       <Box
         sx={{
           maxWidth: 1000,
@@ -290,6 +350,7 @@ const Compose = (postId: string) => {
                 color: catppuccin.text,
                 borderColor: catppuccin.surface1,
               }}
+              onClick={() => handleUpdatePost(postId!, 2)}
             >
               Save Draft
             </Button>
@@ -863,105 +924,35 @@ const Compose = (postId: string) => {
           </Box>
         </Box>
       </Box>
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={() =>
+          setSnackbar((prev) => ({
+            ...prev,
+            open: false,
+          }))
+        }
+        anchorOrigin={{
+          vertical: "top",
+          horizontal: "right",
+        }}
+      >
+        <Alert
+          severity={snackbar.severity}
+          variant="filled"
+          onClose={() =>
+            setSnackbar((prev) => ({
+              ...prev,
+              open: false,
+            }))
+          }
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
-
-function LinkWidget({ editor }: { editor: Editor | null }) {
-  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
-  const [url, setUrl] = useState("");
-
-  const open = Boolean(anchorEl);
-  const isActive = editor?.isActive("link") ?? false;
-
-  const handleOpen = useCallback(
-    (event: React.MouseEvent<HTMLElement>) => {
-      if (!editor) return;
-      const previousUrl = editor.getAttributes("link").href || "";
-      setUrl(previousUrl);
-      setAnchorEl(event.currentTarget);
-    },
-    [editor],
-  );
-
-  const handleClose = () => setAnchorEl(null);
-
-  const applyLink = () => {
-    if (!editor) return;
-
-    if (!url) {
-      editor.chain().focus().extendMarkRange("link").unsetLink().run();
-    } else {
-      editor
-        .chain()
-        .focus()
-        .extendMarkRange("link")
-        .setLink({ href: url })
-        .run();
-    }
-    handleClose();
-  };
-
-  const removeLink = () => {
-    editor?.chain().focus().extendMarkRange("link").unsetLink().run();
-    handleClose();
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      applyLink();
-    }
-  };
-
-  if (!editor) return null;
-
-  return (
-    <>
-      <Tooltip title={isActive ? "Edit link" : "Add link"}>
-        <IconButton
-          size="small"
-          onClick={handleOpen}
-          color={isActive ? "primary" : "default"}
-        >
-          <LinkIcon fontSize="small" sx={{ color: catppuccin.text }} />
-        </IconButton>
-      </Tooltip>
-
-      <Popover
-        open={open}
-        anchorEl={anchorEl}
-        onClose={handleClose}
-        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
-      >
-        <Stack
-          direction="row"
-          spacing={1}
-          sx={{ p: 1.5, alignItems: "center" }}
-        >
-          <TextField
-            size="small"
-            placeholder="https://example.com"
-            value={url}
-            autoFocus
-            onChange={(e) => setUrl(e.target.value)}
-            onKeyDown={handleKeyDown}
-            sx={{ minWidth: 260 }}
-          />
-          <Button size="small" variant="contained" onClick={applyLink}>
-            Apply
-          </Button>
-          {isActive && (
-            <Tooltip title="Remove link">
-              <IconButton size="small" onClick={removeLink}>
-                <LinkOffIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          )}
-        </Stack>
-      </Popover>
-    </>
-  );
-}
 
 export default Compose;

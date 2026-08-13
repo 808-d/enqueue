@@ -4,33 +4,47 @@ import {
   Button,
   Divider,
   Grid,
-  IconButton,
   ListItemIcon,
   ListItemText,
   Menu,
   MenuItem,
-  Paper,
+  Snackbar,
   Typography,
 } from "@mui/material";
-import EditIcon from "@mui/icons-material/Edit";
 import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
-import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
-import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutlined";
-import RepeatIcon from "@mui/icons-material/Repeat";
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import { useAuth } from "../contexts/authContext";
 import { Right } from "../components/shared/right";
 import { catppuccin } from "../theme/catppuccinMocha";
 import { Left } from "../components/shared/left";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import NotesIcon from "@mui/icons-material/Notes";
 import ShortTextIcon from "@mui/icons-material/ShortText";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
+import { usePosts } from "../hooks/usePosts";
+import { Alert } from "@mui/material";
+import Tab from "@mui/material/Tab";
+import TabContext from "@mui/lab/TabContext";
+import TabList from "@mui/lab/TabList";
+import TabPanel from "@mui/lab/TabPanel";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import type { Post } from "../models/post";
+import PostCard from "../components/shared/postCard";
 export function Profile() {
   const { user } = useAuth();
+  const { createPost, getPostsByUser, updatePostStatus } = usePosts();
+  const [error, setError] = useState(false);
   const [createAnchorEl, setCreateAnchorEl] = useState<null | HTMLElement>(
     null,
   );
+  const [searchParams] = useSearchParams();
+  const userId = searchParams.get("id");
+  const [value, setValue] = useState("1");
+  const [posts, setPosts] = useState<Post[]>([]);
+  const navigate = useNavigate();
+  const handleChange = (event: React.SyntheticEvent, newValue: string) => {
+    setValue(newValue);
+  };
 
   const createMenuOpen = Boolean(createAnchorEl);
 
@@ -41,39 +55,33 @@ export function Profile() {
   const handleCreateClose = () => {
     setCreateAnchorEl(null);
   };
-  const posts = [
-    {
-      id: 1,
-      type: "post",
-      content:
-        "Just finished implementing email verification in Enqueue. The authentication flow is finally starting to come together!",
-      time: "2h",
-      likes: 12,
-      comments: 3,
-      reposts: 2,
-    },
-    {
-      id: 2,
-      type: "repost",
-      content:
-        "A good database schema can make the rest of your application dramatically easier to reason about.",
-      time: "5h",
-      likes: 31,
-      comments: 6,
-      reposts: 11,
-    },
-    {
-      id: 3,
-      type: "post",
-      content:
-        "PostgreSQL + Go + React has been a really fun stack to work with.",
-      time: "1d",
-      likes: 24,
-      comments: 5,
-      reposts: 4,
-    },
-  ];
 
+  const handleCreate = async () => {
+    try {
+      await createPost();
+    } catch {
+      setError(true);
+    }
+  };
+
+  useEffect(() => {
+    if (!userId) return;
+
+    const loadPosts = async () => {
+      const response = await getPostsByUser(userId);
+      setPosts(response.data);
+    };
+
+    loadPosts();
+  }, [userId]);
+
+  const postsByStatus = useMemo(() => {
+    return {
+      drafts: posts.filter((post) => post.Status === 1),
+      published: posts.filter((post) => post.Status === 2),
+      hidden: posts.filter((post) => post.Status === 3),
+    };
+  }, [posts]);
   if (!user) {
     return null;
   }
@@ -195,7 +203,6 @@ export function Profile() {
                   >
                     Followers
                   </Typography>
-                  createPost, getPostsByUser,
                 </Box>
 
                 <Box>
@@ -268,6 +275,7 @@ export function Profile() {
                               },
                             },
                           }}
+                          onClick={handleCreate}
                         />
                       </MenuItem>
 
@@ -347,185 +355,104 @@ export function Profile() {
             />
 
             {/* Posts */}
-            <Typography
-              variant="h6"
-              sx={{
-                fontWeight: 700,
-                mb: 2,
-              }}
-            >
-              Posts
-            </Typography>
-
+            <Box>
+              <TabContext value={value}>
+                <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
+                  <TabList
+                    onChange={handleChange}
+                    aria-label="lab API tabs example"
+                    sx={{
+                      "& .MuiTab-root": {
+                        color: catppuccin.text,
+                      },
+                      "& .MuiTabs-indicator": {
+                        backgroundColor: catppuccin.mauve,
+                      },
+                      "& .Mui-selected": {
+                        color: catppuccin.mauve,
+                      },
+                    }}
+                  >
+                    <Tab label="Posts" value="1" />
+                    <Tab label="Reposts" value="2" />
+                    <Tab label="Liked" value="3" />
+                    <Tab label="Drafts" value="4" />
+                  </TabList>
+                </Box>
+                <TabPanel value="1">
+                  <Box
+                    sx={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 2,
+                      p: 0,
+                    }}
+                  >
+                    {postsByStatus.published.map((post) => (
+                      <PostCard
+                        key={post.ID}
+                        id={post.ID}
+                        title={post.Title || "No title"}
+                        description={post.Description}
+                        status={post.Status}
+                        updatedAt={post.UpdateTime}
+                        onClick={() => navigate(`/compose?id=${post.ID}`)}
+                        onDelete={() => updatePostStatus(post.ID)}
+                      />
+                    ))}
+                  </Box>
+                </TabPanel>
+                <TabPanel value="2">Reposts</TabPanel>
+                <TabPanel value="3">Liked</TabPanel>
+                <TabPanel value="4">
+                  <Box
+                    sx={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 2,
+                      p: 0,
+                    }}
+                  >
+                    {postsByStatus.drafts.map((post) => (
+                      <PostCard
+                        key={post.ID}
+                        id={post.ID}
+                        title={(post.Title ??= "No title")}
+                        description={post.Description}
+                        status={post.Status}
+                        updatedAt={post.UpdateTime}
+                        onClick={() => navigate(`/compose?id=${post.ID}`)}
+                        onDelete={(id) => updatePostStatus(id)}
+                      />
+                    ))}
+                  </Box>
+                </TabPanel>
+              </TabContext>
+            </Box>
             <Box
               sx={{
                 display: "flex",
                 flexDirection: "column",
                 gap: 2,
               }}
-            >
-              {posts.map((post) => (
-                <Paper
-                  key={post.id}
-                  elevation={0}
-                  sx={{
-                    bgcolor: catppuccin.mantle,
-                    color: catppuccin.text,
-                    borderRadius: 2,
-                    p: 2.5,
-                  }}
-                >
-                  {/* Repost indicator */}
-                  {post.type === "repost" && (
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 0.75,
-                        mb: 1.5,
-                        color: catppuccin.subtext0,
-                      }}
-                    >
-                      <RepeatIcon sx={{ fontSize: 17 }} />
-
-                      <Typography variant="caption">
-                        {user.username} reposted
-                      </Typography>
-                    </Box>
-                  )}
-
-                  {/* Post header */}
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 1.5,
-                      }}
-                    >
-                      <Avatar
-                        src={user.avatarUrl ?? undefined}
-                        sx={{
-                          width: 42,
-                          height: 42,
-                          bgcolor: catppuccin.mauve,
-                          color: catppuccin.base,
-                          fontWeight: 700,
-                        }}
-                      >
-                        {user.username.charAt(0).toUpperCase()}
-                      </Avatar>
-
-                      <Box>
-                        <Typography
-                          sx={{
-                            fontWeight: 700,
-                            lineHeight: 1.2,
-                          }}
-                        >
-                          {user.username}
-                        </Typography>
-
-                        <Typography
-                          variant="caption"
-                          sx={{
-                            color: catppuccin.subtext0,
-                          }}
-                        >
-                          @{user.username} · {post.time}
-                        </Typography>
-                      </Box>
-                    </Box>
-
-                    <IconButton
-                      size="small"
-                      sx={{
-                        color: catppuccin.subtext1,
-                      }}
-                    >
-                      <MoreHorizIcon />
-                    </IconButton>
-                  </Box>
-
-                  {/* Content */}
-                  <Typography
-                    sx={{
-                      mt: 2,
-                      lineHeight: 1.7,
-                    }}
-                  >
-                    {post.content}
-                  </Typography>
-
-                  <Divider
-                    sx={{
-                      my: 2,
-                      borderColor: catppuccin.surface0,
-                    }}
-                  />
-
-                  {/* Actions */}
-                  <Box
-                    sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                    }}
-                  >
-                    <Button
-                      startIcon={<FavoriteBorderIcon />}
-                      sx={{
-                        color: catppuccin.subtext1,
-                        textTransform: "none",
-                        "&:hover": {
-                          color: catppuccin.red,
-                          bgcolor: "transparent",
-                        },
-                      }}
-                    >
-                      {post.likes}
-                    </Button>
-
-                    <Button
-                      startIcon={<ChatBubbleOutlineIcon />}
-                      sx={{
-                        color: catppuccin.subtext1,
-                        textTransform: "none",
-                        "&:hover": {
-                          color: catppuccin.blue,
-                          bgcolor: "transparent",
-                        },
-                      }}
-                    >
-                      {post.comments}
-                    </Button>
-
-                    <Button
-                      startIcon={<RepeatIcon />}
-                      sx={{
-                        color: catppuccin.subtext1,
-                        textTransform: "none",
-                        "&:hover": {
-                          color: catppuccin.green,
-                          bgcolor: "transparent",
-                        },
-                      }}
-                    >
-                      {post.reposts}
-                    </Button>
-                  </Box>
-                </Paper>
-              ))}
-            </Box>
+            ></Box>
           </Box>
         </Box>
       </Grid>
       <Right />
+      <Snackbar
+        open={error}
+        autoHideDuration={4000}
+        onClose={() => setError(false)}
+      >
+        <Alert
+          severity="error"
+          variant="filled"
+          onClose={() => setError(false)}
+        >
+          Failed to create post
+        </Alert>
+      </Snackbar>
     </Grid>
   );
 }

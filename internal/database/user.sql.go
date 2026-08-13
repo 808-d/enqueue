@@ -125,6 +125,18 @@ func (q *Queries) GetUserByUsernameAndPassword(ctx context.Context, arg GetUserB
 	return i, err
 }
 
+const getUserIdByUsername = `-- name: GetUserIdByUsername :one
+SELECT id FROM users
+WHERE username = $1 AND is_delete = false LIMIT 1
+`
+
+func (q *Queries) GetUserIdByUsername(ctx context.Context, username string) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, getUserIdByUsername, username)
+	var id pgtype.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
 const listUsers = `-- name: ListUsers :many
 SELECT is_delete, create_time, update_time, id, username, email, avatar, password, role, email_verified, bio, name FROM users WHERE is_delete = false and role = 'user' ORDER BY id
 `
