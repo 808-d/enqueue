@@ -27,7 +27,9 @@ import Link from "@tiptap/extension-link";
 
 import CommentEditor from "./commentEditor";
 import { useComments } from "../../hooks/useComments";
-
+import MoreVertIcon from "@mui/icons-material/MoreVert";
+import EditIcon from "@mui/icons-material/Edit";
+import { Menu, MenuItem } from "@mui/material";
 type PostCardProps = {
   id: string;
   title: string;
@@ -80,6 +82,18 @@ export default function PostCard({
 
   const [open, setOpen] = useState(false);
   const { createComment, updateComment, deleteComment } = useComments();
+  const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
+  const menuOpen = Boolean(menuAnchor);
+
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    event.stopPropagation();
+    setMenuAnchor(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setMenuAnchor(null);
+  };
+
   const handleOpen = () => {
     setOpen(true);
   };
@@ -217,20 +231,46 @@ export default function PostCard({
               >
                 <IconButton
                   size="small"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onDelete(id);
-                  }}
+                  onClick={handleMenuOpen}
                   sx={{
-                    color: "#f38ba8",
-
+                    color: "#a6adc8",
                     "&:hover": {
-                      backgroundColor: "rgba(243, 139, 168, 0.1)",
+                      backgroundColor: "#45475a",
                     },
                   }}
                 >
-                  <DeleteOutlineIcon fontSize="small" />
+                  <MoreVertIcon fontSize="small" />
                 </IconButton>
+
+                <Menu
+                  anchorEl={menuAnchor}
+                  open={menuOpen}
+                  onClose={handleMenuClose}
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <MenuItem
+                    onClick={() => {
+                      setMenuAnchor(null);
+                      onClick?.();
+                    }}
+                  >
+                    <EditIcon fontSize="small" sx={{ mr: 1 }} />
+                    Edit
+                  </MenuItem>
+
+                  <MenuItem
+                    onClick={() => {
+                      setMenuAnchor(null);
+                      onDelete(id);
+                    }}
+                    sx={{
+                      color: "#f38ba8",
+                    }}
+                  >
+                    <DeleteOutlineIcon fontSize="small" sx={{ mr: 1 }} />
+                    Delete
+                  </MenuItem>
+                </Menu>
 
                 {statusInfo && (
                   <Chip

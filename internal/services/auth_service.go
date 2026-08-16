@@ -12,7 +12,6 @@ import (
 
 	"enqueue/internal/structs"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -61,26 +60,8 @@ func (s *AuthService) GetToken(
 		return "", errors.New("invalid username or password")
 
 	}
-	return GenerateToken(user.ID.String(), user.Username, user.Avatar.String, user.Email, user.Role)
+	return utils.GenerateToken(user.ID.String(), user.Username, user.Avatar.String, user.Email, user.Role)
 
-}
-
-func GenerateToken(userId, username, avatar, email, role string) (string, error) {
-	key := []byte(os.Getenv("JWT_SECRET"))
-	log.Printf("UserID: %s", userId)
-	claims := jwt.MapClaims{
-		"id":       userId,
-		"username": username,
-		"avatar":   avatar,
-		"email":    email,
-		"role":     role,
-		"exp":      time.Now().Add(24 * time.Hour).Unix(),
-		"iat":      time.Now().Unix(),
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-
-	return token.SignedString(key)
 }
 
 func (s *AuthService) CreateUser(ctx context.Context, username string, email string, password string) (pgtype.UUID, error) {
@@ -96,16 +77,16 @@ func (s *AuthService) CreateUser(ctx context.Context, username string, email str
 	return id, err
 }
 
-func (s *AuthService) Signup(context context.Context, username string, email string, password string) error {
-	tx, err := s.db.Begin(context)
+func (s *AuthService) Signup(ctx context.Context, username string, email string, password string) error {
+	tx, err := s.db.Begin(ctx)
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(context)
+	defer tx.Rollback(ctx)
 
 	qtx := s.repo.WithTx(tx)
 	// check user name or email exist
-	isValid, err := s.ValidateSignUpRequest(context, username, email)
+	isValid, err := s.ValidateSignUpRequest(ctx, username, email)
 	if err != nil {
 		log.Printf("Validation error: %v\n", err)
 		return err
@@ -116,7 +97,7 @@ func (s *AuthService) Signup(context context.Context, username string, email str
 
 	// create user / with email_verified = false
 	hashedPassword := utils.Hash256(password)
-	userId, err := qtx.CreateUser(context, database.CreateUserParams{
+	userId, err := qtx.CreateUser(ctx, database.CreateUserParams{
 		Username: username,
 		Email:    email,
 		Password: pgtype.Text{
@@ -134,7 +115,7 @@ func (s *AuthService) Signup(context context.Context, username string, email str
 		return err
 	}
 
-	err = qtx.CreateEmailVerification(context, database.CreateEmailVerificationParams{
+	err = qtx.CreateEmailVerification(ctx, database.CreateEmailVerificationParams{
 		UserID: userId,
 		Token:  token,
 		ExpiresAt: pgtype.Timestamptz{
@@ -152,15 +133,15 @@ func (s *AuthService) Signup(context context.Context, username string, email str
 		email,
 		"Verify your Enqueue email",
 		fmt.Sprintf(`Welcome to Enqueue!
-Thank you for signing up!
-Please click the link below to verify your email address:
-%s/verify?token=%s
-If you didn't create an Enqueue account, you can safely ignore this email.
-Thanks,
-The Enqueue team`, os.Getenv("FRONTEND_URL"), token),
+		Thank you for signing up!
+		Please click the link below to verify your email address:
+		%s/verify?token=%s
+		If you didn't create an Enqueue account, you can safely ignore this email.
+		Thanks,
+		The Enqueue team`, os.Getenv("FRONTEND_URL"), token),
 	)
 
-	return tx.Commit(context)
+	return tx.Commit(ctx)
 }
 
 func (s *AuthService) Verify(ctx context.Context, token string) (bool, error) {
@@ -183,10 +164,6 @@ func (s *AuthService) Verify(ctx context.Context, token string) (bool, error) {
 
 func (s *AuthService) DecodeToken(tokenString string) (*structs.Claims, error) {
 	token, err := utils.ValidateToken(tokenString)
-	if err != nil {
-		return nil, err
-	}
-
 	if err != nil {
 		return nil, errors.New("invalid token")
 	}

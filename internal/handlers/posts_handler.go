@@ -100,16 +100,22 @@ func (h *PostsHandler) GetPostById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	post, err := h.postService.GetPostById(r.Context(), postId)
+	post, comments, err := h.postService.GetPostById(r.Context(), postId)
 	if err != nil {
-		http.Error(w, "failed to delete post", http.StatusInternalServerError)
+		log.Printf("failed to get post %s: %v", postId, err)
+		http.Error(w, "failed to get post", http.StatusInternalServerError)
 		return
+	}
+
+	response := posts.PostResponse{
+		Post:     post,
+		Comments: comments,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
-	if err := json.NewEncoder(w).Encode(post); err != nil {
+	if err := json.NewEncoder(w).Encode(response); err != nil {
 		return
 	}
 }
@@ -121,7 +127,7 @@ func (h *PostsHandler) UpdatePostStatus(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	post, err := h.postService.GetPostById(r.Context(), postId)
+	post, err := h.postService.UpdatePostStatus(r.Context(), postId)
 	if err != nil {
 		http.Error(w, "failed to delete post", http.StatusInternalServerError)
 		return

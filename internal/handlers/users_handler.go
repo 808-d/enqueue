@@ -61,9 +61,10 @@ func (h *UsersHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		r.Context(),
 		req.ID,
 		req.Username,
+		req.Name,
 		req.Avatar,
+		req.Bio,
 		req.Email,
-		req.Password,
 	)
 	if err != nil {
 		http.Error(w, "failed to update user", http.StatusInternalServerError)

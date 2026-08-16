@@ -11,6 +11,21 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const addPendingEmail = `-- name: AddPendingEmail :exec
+UPDATE users SET pending_email = $2
+where id = $1 and is_delete = false
+`
+
+type AddPendingEmailParams struct {
+	ID           pgtype.UUID
+	PendingEmail pgtype.Text
+}
+
+func (q *Queries) AddPendingEmail(ctx context.Context, arg AddPendingEmailParams) error {
+	_, err := q.db.Exec(ctx, addPendingEmail, arg.ID, arg.PendingEmail)
+	return err
+}
+
 const checkVerify = `-- name: CheckVerify :one
 SELECT user_id FROM email_verifications
 WHERE (token = $1 AND expires_at < now())
@@ -72,7 +87,7 @@ func (q *Queries) DeleteUser(ctx context.Context, id pgtype.UUID) error {
 }
 
 const getUser = `-- name: GetUser :one
-SELECT is_delete, create_time, update_time, id, username, email, avatar, password, role, email_verified, bio, name FROM users WHERE id = $1 AND is_delete = false LIMIT 1
+SELECT is_delete, create_time, update_time, id, username, email, avatar, password, role, email_verified, bio, name, pending_email FROM users WHERE id = $1 AND is_delete = false LIMIT 1
 `
 
 func (q *Queries) GetUser(ctx context.Context, id pgtype.UUID) (User, error) {
@@ -91,12 +106,13 @@ func (q *Queries) GetUser(ctx context.Context, id pgtype.UUID) (User, error) {
 		&i.EmailVerified,
 		&i.Bio,
 		&i.Name,
+		&i.PendingEmail,
 	)
 	return i, err
 }
 
 const getUserByUsernameAndPassword = `-- name: GetUserByUsernameAndPassword :one
-SELECT is_delete, create_time, update_time, id, username, email, avatar, password, role, email_verified, bio, name FROM users
+SELECT is_delete, create_time, update_time, id, username, email, avatar, password, role, email_verified, bio, name, pending_email FROM users
 WHERE username = $1 AND password = $2 AND is_delete = false LIMIT 1
 `
 
@@ -121,6 +137,7 @@ func (q *Queries) GetUserByUsernameAndPassword(ctx context.Context, arg GetUserB
 		&i.EmailVerified,
 		&i.Bio,
 		&i.Name,
+		&i.PendingEmail,
 	)
 	return i, err
 }
@@ -138,7 +155,7 @@ func (q *Queries) GetUserIdByUsername(ctx context.Context, username string) (pgt
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT is_delete, create_time, update_time, id, username, email, avatar, password, role, email_verified, bio, name FROM users WHERE is_delete = false and role = 'user' ORDER BY id
+SELECT is_delete, create_time, update_time, id, username, email, avatar, password, role, email_verified, bio, name, pending_email FROM users WHERE is_delete = false and role = 'user' ORDER BY id
 `
 
 func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
@@ -163,6 +180,7 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 			&i.EmailVerified,
 			&i.Bio,
 			&i.Name,
+			&i.PendingEmail,
 		); err != nil {
 			return nil, err
 		}
@@ -174,36 +192,61 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 	return items, nil
 }
 
-const updateUser = `-- name: UpdateUser :one
+const updateEmail = `-- name: UpdateEmail :one
+UPDATE users SET email = pending_email,
+pending_email = null
+where id = $1 and is_delete = false
+RETURNING is_delete, create_time, update_time, id, username, email, avatar, password, role, email_verified, bio, name, pending_email
+`
+
+func (q *Queries) UpdateEmail(ctx context.Context, id pgtype.UUID) (User, error) {
+	row := q.db.QueryRow(ctx, updateEmail, id)
+	var i User
+	err := row.Scan(
+		&i.IsDelete,
+		&i.CreateTime,
+		&i.UpdateTime,
+		&i.ID,
+		&i.Username,
+		&i.Email,
+		&i.Avatar,
+		&i.Password,
+		&i.Role,
+		&i.EmailVerified,
+		&i.Bio,
+		&i.Name,
+		&i.PendingEmail,
+	)
+	return i, err
+}
+
+const updateUserNotIncludeEmail = `-- name: UpdateUserNotIncludeEmail :one
 UPDATE users
 SET 
 username = $2,
-email = $3,
-name = $4,
-avatar = $5,
-password = $6,
+name = $3,
+avatar = $4,
+bio = $5,
 update_time = now()
 WHERE id = $1 AND is_delete = false
-RETURNING is_delete, create_time, update_time, id, username, email, avatar, password, role, email_verified, bio, name
+RETURNING is_delete, create_time, update_time, id, username, email, avatar, password, role, email_verified, bio, name, pending_email
 `
 
-type UpdateUserParams struct {
+type UpdateUserNotIncludeEmailParams struct {
 	ID       pgtype.UUID
 	Username string
-	Email    string
 	Name     pgtype.Text
 	Avatar   pgtype.Text
-	Password pgtype.Text
+	Bio      pgtype.Text
 }
 
-func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
-	row := q.db.QueryRow(ctx, updateUser,
+func (q *Queries) UpdateUserNotIncludeEmail(ctx context.Context, arg UpdateUserNotIncludeEmailParams) (User, error) {
+	row := q.db.QueryRow(ctx, updateUserNotIncludeEmail,
 		arg.ID,
 		arg.Username,
-		arg.Email,
 		arg.Name,
 		arg.Avatar,
-		arg.Password,
+		arg.Bio,
 	)
 	var i User
 	err := row.Scan(
@@ -219,16 +262,17 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.EmailVerified,
 		&i.Bio,
 		&i.Name,
+		&i.PendingEmail,
 	)
 	return i, err
 }
 
 const userExistsByUsernameOrEmail = `-- name: UserExistsByUsernameOrEmail :one
 SELECT EXISTS (
-    SELECT 1
-    FROM users
-    WHERE (username = $1 OR email = $2)
-      AND is_delete = false
+  SELECT 1
+  FROM users
+  WHERE (username = $1 OR email = $2)
+  AND is_delete = false
 )
 `
 

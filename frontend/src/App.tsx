@@ -6,6 +6,8 @@ import Signup from "./pages/signup";
 import Verify from "./pages/verify";
 import { Profile } from "./pages/profile";
 import Compose from "./pages/compose";
+import Read from "./pages/read";
+import Settings from "./pages/setting";
 
 // import Profile from "./pages/profile";
 function App() {
@@ -19,6 +21,8 @@ function App() {
         <Route path="/verify" element={<Verify />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/compose" element={<Compose />} />
+        <Route path="/read" element={<Read />} />
+        <Route path="/setting" element={<Settings />} />
       </Routes>
     </BrowserRouter>
   );

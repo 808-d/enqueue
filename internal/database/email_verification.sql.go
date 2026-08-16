@@ -27,3 +27,13 @@ func (q *Queries) CreateEmailVerification(ctx context.Context, arg CreateEmailVe
 	_, err := q.db.Exec(ctx, createEmailVerification, arg.UserID, arg.Token, arg.ExpiresAt)
 	return err
 }
+
+const getUserByToken = `-- name: GetUserByToken :exec
+SELECT id, user_id, token, expires_at, created_at FROM email_verifications
+WHERE token = $1 AND expires_at < now()
+`
+
+func (q *Queries) GetUserByToken(ctx context.Context, token string) error {
+	_, err := q.db.Exec(ctx, getUserByToken, token)
+	return err
+}

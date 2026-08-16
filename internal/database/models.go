@@ -44,6 +44,12 @@ type EmailVerification struct {
 	CreatedAt pgtype.Timestamptz
 }
 
+type Follow struct {
+	FollowerID  pgtype.UUID
+	FollowingID pgtype.UUID
+	CreateTime  pgtype.Timestamp
+}
+
 type Like struct {
 	UserID     pgtype.UUID
 	PostID     pgtype.UUID
@@ -88,4 +94,5 @@ type User struct {
 	EmailVerified bool
 	Bio           pgtype.Text
 	Name          pgtype.Text
+	PendingEmail  pgtype.Text
 }

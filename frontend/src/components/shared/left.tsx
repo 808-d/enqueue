@@ -9,7 +9,7 @@ import { catppuccin } from "../../theme/catppuccinMocha";
 import SearchIcon from "@mui/icons-material/Search";
 import { Person } from "@mui/icons-material";
 import LoginIcon from "@mui/icons-material/Login";
-
+import SettingsIcon from "@mui/icons-material/Settings";
 export function Left() {
   const { user, loading } = useAuth();
   if (loading) {
@@ -84,6 +84,21 @@ export function Left() {
             }}
           >
             Explore
+          </Button>
+          <Button
+            startIcon={<SettingsIcon />}
+            component={Link}
+            to={`/setting`}
+            sx={{
+              justifyContent: "flex-start",
+              bgcolor: catppuccin.base,
+              color: catppuccin.text,
+              "&:hover": {
+                bgcolor: catppuccin.surface0,
+              },
+            }}
+          >
+            Setting
           </Button>
           {user ? (
             <Button

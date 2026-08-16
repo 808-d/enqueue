@@ -9,7 +9,6 @@ import {
 import type { User } from "../models/user";
 import axios from "axios";
 import { endpoints } from "../utils/endpoints";
-import { FastRewind } from "@mui/icons-material";
 
 type AuthContextType = {
   user: User | null;

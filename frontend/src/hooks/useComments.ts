@@ -30,7 +30,7 @@ export function useComments() {
     const response = await axios.patch(
       endpoints.comments,
       {
-        id: id,
+        postId: id,
         content: content,
       },
       {

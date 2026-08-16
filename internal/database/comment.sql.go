@@ -49,7 +49,7 @@ func (q *Queries) CreateComment(ctx context.Context, arg CreateCommentParams) (C
 
 const deleteComment = `-- name: DeleteComment :one
 UPDATE comments
-SET is_deleted = true
+SET is_delete = true
 WHERE id = $1
 RETURNING is_delete, create_time, update_time, id, user_id, post_id, content, reply_to
 `
@@ -68,6 +68,40 @@ func (q *Queries) DeleteComment(ctx context.Context, id pgtype.UUID) (Comment, e
 		&i.ReplyTo,
 	)
 	return i, err
+}
+
+const getCommentsByPost = `-- name: GetCommentsByPost :many
+select is_delete, create_time, update_time, id, user_id, post_id, content, reply_to from comments c
+where C.post_id  = $1 and is_delete = false
+`
+
+func (q *Queries) GetCommentsByPost(ctx context.Context, postID pgtype.UUID) ([]Comment, error) {
+	rows, err := q.db.Query(ctx, getCommentsByPost, postID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Comment
+	for rows.Next() {
+		var i Comment
+		if err := rows.Scan(
+			&i.IsDelete,
+			&i.CreateTime,
+			&i.UpdateTime,
+			&i.ID,
+			&i.UserID,
+			&i.PostID,
+			&i.Content,
+			&i.ReplyTo,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const updateComment = `-- name: UpdateComment :one
