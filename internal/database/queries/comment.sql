@@ -17,6 +17,10 @@ RETURNING *;
 
 -- name: DeleteComment :one
 UPDATE comments
-SET is_deleted = true
+SET is_delete = true
 WHERE id = $1
 RETURNING *;
+
+-- name: GetCommentsByPost :many
+select * from comments c
+where C.post_id  = $1 and is_delete = false;

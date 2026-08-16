@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
+	"github.com/redis/go-redis/v9"
 	"github.com/rs/cors"
 
 	"enqueue/internal/database"
@@ -28,10 +29,21 @@ func main() {
 		os.Exit(1)
 	}
 	defer pool.Close()
-
 	queries := database.New(pool)
 
-	userService := services.NewUserService(queries)
+	// connect to redis
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379",
+		Password: "", // no password
+		DB:       0,  // use default DB
+		Protocol: 2,
+	})
+	defer rdb.Close()
+	if err := rdb.Ping(context.Background()).Err(); err != nil {
+		log.Fatalf("unable to connect to redis: %v", err)
+	}
+
+	userService := services.NewUserService(pool, rdb)
 	usersHandler := handlers.NewUsersHandler(userService)
 
 	postService := services.NewPostService(pool)

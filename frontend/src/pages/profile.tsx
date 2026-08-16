@@ -30,6 +30,7 @@ import TabPanel from "@mui/lab/TabPanel";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import type { Post } from "../models/post";
 import PostCard from "../components/shared/postCard";
+
 export function Profile() {
   const { user } = useAuth();
   const { createPost, getPostsByUser, updatePostStatus } = usePosts();
@@ -95,8 +96,6 @@ export function Profile() {
             minHeight: "100vh",
             bgcolor: catppuccin.base,
             color: catppuccin.text,
-            px: 3,
-            py: 4,
           }}
         >
           {/* Profile */}
@@ -104,6 +103,7 @@ export function Profile() {
             sx={{
               maxWidth: 700,
               mx: "auto",
+              px: 3,
             }}
           >
             {/* Avatar + Username */}
@@ -111,28 +111,10 @@ export function Profile() {
               sx={{
                 display: "flex",
                 justifyContent: "space-between",
-                alignItems: "flex-start",
+                alignItems: "flex-end",
+                mt: 2,
               }}
             >
-              <Box>
-                <Typography
-                  variant="h4"
-                  sx={{
-                    fontWeight: 800,
-                    color: catppuccin.text,
-                  }}
-                >
-                  {user.username}
-                </Typography>
-                <Typography
-                  sx={{
-                    color: catppuccin.subtext0,
-                    mt: 0.25,
-                  }}
-                >
-                  @{user.username}
-                </Typography>
-              </Box>
               <Avatar
                 src={user.avatarUrl ?? undefined}
                 sx={{
@@ -142,11 +124,35 @@ export function Profile() {
                   color: catppuccin.base,
                   fontSize: 42,
                   fontWeight: 700,
+                  border: `4px solid ${catppuccin.base}`,
                 }}
               >
                 {user.username.charAt(0).toUpperCase()}
               </Avatar>
             </Box>
+
+            <Box sx={{ mt: 2 }}>
+              <Typography
+                variant="h4"
+                sx={{
+                  fontWeight: 800,
+                  color: catppuccin.text,
+                  letterSpacing: "-0.02em",
+                }}
+              >
+                {user.username}
+              </Typography>
+              <Typography
+                sx={{
+                  color: catppuccin.subtext0,
+                  mt: 0.25,
+                  fontSize: "0.95rem",
+                }}
+              >
+                @{user.username}
+              </Typography>
+            </Box>
+
             {/* User information */}
             <Box sx={{ mt: 2 }}>
               {user.bio && (
@@ -155,7 +161,8 @@ export function Profile() {
                     mt: 2,
                     maxWidth: 600,
                     color: catppuccin.subtext1,
-                    lineHeight: 1.6,
+                    lineHeight: 1.7,
+                    fontSize: "1rem",
                   }}
                 >
                   {user.bio}
@@ -171,8 +178,7 @@ export function Profile() {
                   color: catppuccin.subtext0,
                 }}
               >
-                <CalendarMonthIcon sx={{ fontSize: 18 }} />
-
+                <CalendarMonthIcon sx={{ fontSize: 16 }} />
                 <Typography variant="body2">Joined July 2026</Typography>
               </Box>
 
@@ -180,44 +186,44 @@ export function Profile() {
               <Box
                 sx={{
                   display: "flex",
-                  gap: 4,
-                  mt: 2,
+                  gap: 1,
+                  mt: 3,
                 }}
               >
-                <Box>
-                  <Typography sx={{ fontWeight: 700 }}>42</Typography>
-
-                  <Typography
-                    variant="caption"
-                    sx={{ color: catppuccin.subtext0 }}
+                {[
+                  { label: "Posts", value: 42 },
+                  { label: "Followers", value: 128 },
+                  { label: "Following", value: 83 },
+                ].map((stat) => (
+                  <Box
+                    key={stat.label}
+                    sx={{
+                      display: "flex",
+                      alignItems: "baseline",
+                      gap: 0.75,
+                      px: 2,
+                      py: 1,
+                      borderRadius: 2,
+                      bgcolor: catppuccin.mantle,
+                      cursor: "default",
+                      "&:hover": { bgcolor: catppuccin.surface0 },
+                    }}
                   >
-                    Posts
-                  </Typography>
-                </Box>
-
-                <Box>
-                  <Typography sx={{ fontWeight: 700 }}>128</Typography>
-                  <Typography
-                    variant="caption"
-                    sx={{ color: catppuccin.subtext0 }}
-                  >
-                    Followers
-                  </Typography>
-                </Box>
-
-                <Box>
-                  <Typography sx={{ fontWeight: 700 }}>83</Typography>
-
-                  <Typography
-                    variant="caption"
-                    sx={{ color: catppuccin.subtext0 }}
-                  >
-                    Following
-                  </Typography>
-                </Box>
+                    <Typography sx={{ fontWeight: 700, fontSize: "1rem" }}>
+                      {stat.value}
+                    </Typography>
+                    <Typography
+                      variant="caption"
+                      sx={{ color: catppuccin.subtext0 }}
+                    >
+                      {stat.label}
+                    </Typography>
+                  </Box>
+                ))}
               </Box>
+
               {/* function buttons */}
-              <Box>
+              <Box sx={{ mt: 3 }}>
                 <Grid container spacing={1}>
                   <Grid size="grow">
                     <Button
@@ -230,10 +236,12 @@ export function Profile() {
                         bgcolor: catppuccin.mauve,
                         color: catppuccin.base,
                         textTransform: "none",
+                        fontWeight: 600,
                         borderRadius: 2,
+                        boxShadow: "none",
                         "&:hover": {
-                          bgcolor: catppuccin.surface0,
-                          color: catppuccin.mauve,
+                          bgcolor: catppuccin.pink,
+                          boxShadow: "none",
                         },
                       }}
                     >
@@ -251,6 +259,8 @@ export function Profile() {
                             bgcolor: catppuccin.mantle,
                             color: catppuccin.text,
                             border: `1px solid ${catppuccin.surface0}`,
+                            borderRadius: 2,
+                            minWidth: 220,
                           },
                         },
                       }}
@@ -260,6 +270,7 @@ export function Profile() {
                           handleCreateClose();
                           // navigate("/create/post");
                         }}
+                        sx={{ py: 1.25 }}
                       >
                         <ListItemIcon>
                           <NotesIcon sx={{ color: catppuccin.mauve }} />
@@ -284,6 +295,7 @@ export function Profile() {
                           handleCreateClose();
                           // navigate("/create/brief");
                         }}
+                        sx={{ py: 1.25 }}
                       >
                         <ListItemIcon>
                           <ShortTextIcon sx={{ color: catppuccin.blue }} />
@@ -313,6 +325,7 @@ export function Profile() {
                         borderColor: catppuccin.surface1,
                         color: catppuccin.text,
                         textTransform: "none",
+                        fontWeight: 600,
                         borderRadius: 2,
                         "&:hover": {
                           borderColor: catppuccin.mauve,
@@ -357,19 +370,25 @@ export function Profile() {
             {/* Posts */}
             <Box>
               <TabContext value={value}>
-                <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
+                <Box sx={{ borderBottom: `1px solid ${catppuccin.surface0}` }}>
                   <TabList
                     onChange={handleChange}
-                    aria-label="lab API tabs example"
+                    aria-label="profile content tabs"
                     sx={{
+                      minHeight: 44,
                       "& .MuiTab-root": {
-                        color: catppuccin.text,
+                        color: catppuccin.subtext0,
+                        textTransform: "none",
+                        fontWeight: 600,
+                        fontSize: "0.9rem",
+                        minHeight: 44,
                       },
                       "& .MuiTabs-indicator": {
                         backgroundColor: catppuccin.mauve,
+                        height: 2,
                       },
                       "& .Mui-selected": {
-                        color: catppuccin.mauve,
+                        color: `${catppuccin.text} !important`,
                       },
                     }}
                   >
@@ -379,7 +398,7 @@ export function Profile() {
                     <Tab label="Drafts" value="4" />
                   </TabList>
                 </Box>
-                <TabPanel value="1">
+                <TabPanel value="1" sx={{ px: 0 }}>
                   <Box
                     sx={{
                       display: "flex",
@@ -388,6 +407,17 @@ export function Profile() {
                       p: 0,
                     }}
                   >
+                    {postsByStatus.published.length === 0 && (
+                      <Typography
+                        sx={{
+                          color: catppuccin.overlay0,
+                          py: 4,
+                          textAlign: "center",
+                        }}
+                      >
+                        No posts published yet.
+                      </Typography>
+                    )}
                     {postsByStatus.published.map((post) => (
                       <PostCard
                         key={post.ID}
@@ -396,15 +426,35 @@ export function Profile() {
                         description={post.Description}
                         status={post.Status}
                         updatedAt={post.UpdateTime}
-                        onClick={() => navigate(`/compose?id=${post.ID}`)}
+                        onClick={() => navigate(`/read?id=${post.ID}`)}
                         onDelete={() => updatePostStatus(post.ID)}
                       />
                     ))}
                   </Box>
                 </TabPanel>
-                <TabPanel value="2">Reposts</TabPanel>
-                <TabPanel value="3">Liked</TabPanel>
-                <TabPanel value="4">
+                <TabPanel value="2" sx={{ px: 0 }}>
+                  <Typography
+                    sx={{
+                      color: catppuccin.overlay0,
+                      py: 4,
+                      textAlign: "center",
+                    }}
+                  >
+                    Reposts
+                  </Typography>
+                </TabPanel>
+                <TabPanel value="3" sx={{ px: 0 }}>
+                  <Typography
+                    sx={{
+                      color: catppuccin.overlay0,
+                      py: 4,
+                      textAlign: "center",
+                    }}
+                  >
+                    Liked
+                  </Typography>
+                </TabPanel>
+                <TabPanel value="4" sx={{ px: 0 }}>
                   <Box
                     sx={{
                       display: "flex",
@@ -413,6 +463,17 @@ export function Profile() {
                       p: 0,
                     }}
                   >
+                    {postsByStatus.drafts.length === 0 && (
+                      <Typography
+                        sx={{
+                          color: catppuccin.overlay0,
+                          py: 4,
+                          textAlign: "center",
+                        }}
+                      >
+                        No drafts yet.
+                      </Typography>
+                    )}
                     {postsByStatus.drafts.map((post) => (
                       <PostCard
                         key={post.ID}
@@ -421,7 +482,6 @@ export function Profile() {
                         description={post.Description}
                         status={post.Status}
                         updatedAt={post.UpdateTime}
-                        onClick={() => navigate(`/compose?id=${post.ID}`)}
                         onDelete={(id) => updatePostStatus(id)}
                       />
                     ))}
@@ -429,13 +489,6 @@ export function Profile() {
                 </TabPanel>
               </TabContext>
             </Box>
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 2,
-              }}
-            ></Box>
           </Box>
         </Box>
       </Grid>

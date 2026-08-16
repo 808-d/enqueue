@@ -9,14 +9,15 @@ INSERT INTO users
 (id, username, email, password,name, role, is_delete, email_verified, create_time)
 VALUES (gen_random_uuid(), $1, $2, $3, $4,'user', false, false,now())
 RETURNING id;
--- name: UpdateUser :one
+
+
+-- name: UpdateUserNotIncludeEmail :one
 UPDATE users
 SET 
 username = $2,
-email = $3,
-name = $4,
-avatar = $5,
-password = $6,
+name = $3,
+avatar = $4,
+bio = $5,
 update_time = now()
 WHERE id = $1 AND is_delete = false
 RETURNING *;
@@ -39,10 +40,10 @@ WHERE Id = $1 AND is_delete = false;
 
 -- name: UserExistsByUsernameOrEmail :one
 SELECT EXISTS (
-    SELECT 1
-    FROM users
-    WHERE (username = $1 OR email = $2)
-      AND is_delete = false
+  SELECT 1
+  FROM users
+  WHERE (username = $1 OR email = $2)
+  AND is_delete = false
 );
 
 
@@ -58,3 +59,13 @@ WHERE "token"= $1;
 -- name: GetUserIdByUsername :one
 SELECT id FROM users
 WHERE username = $1 AND is_delete = false LIMIT 1;
+
+-- name: AddPendingEmail :exec
+UPDATE users SET pending_email = $2
+where id = $1 and is_delete = false;
+
+-- name: UpdateEmail :one
+UPDATE users SET email = pending_email,
+pending_email = null
+where id = $1 and is_delete = false
+RETURNING *;

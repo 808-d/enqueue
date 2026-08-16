@@ -1,4 +1,4 @@
-export interface Post {
+export type Post = {
   ID: string;
   Title: string | null;
   Content: string | null;
@@ -7,4 +7,4 @@ export interface Post {
   CreateTime: string | null;
   UpdateTime: string | null;
   Status: number;
-}
+};

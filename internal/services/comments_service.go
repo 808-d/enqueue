@@ -60,9 +60,9 @@ func (s *CommentService) DeleteComment(ctx context.Context, id uuid.UUID) (datab
 	})
 }
 
-// func (s *CommentService) GetComment(ctx context.Context, id uuid.UUID) ([]database.Comment, error) {
-// 	return s.CommentRepo.GetComment(ctx, pgtype.UUID{
-// 		Bytes: id,
-// 		Valid: true,
-// 	})
-// }
+func (s *CommentService) GetCommentsByPost(ctx context.Context, id uuid.UUID) ([]database.Comment, error) {
+	return s.CommentRepo.GetCommentsByPost(ctx, pgtype.UUID{
+		Bytes: id,
+		Valid: true,
+	})
+}

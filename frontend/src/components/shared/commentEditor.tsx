@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   Box,
@@ -30,11 +30,13 @@ import { catppuccin } from "../../theme/catppuccinMocha";
 type CommentEditorProps = {
   onSubmit: (comment: string) => void;
   onCancel?: () => void;
+  content?: string;
 };
 
 export default function CommentEditor({
   onSubmit,
   onCancel,
+  content,
 }: CommentEditorProps) {
   const [emojiAnchor, setEmojiAnchor] = useState<HTMLButtonElement | null>(
     null,
@@ -64,9 +66,11 @@ export default function CommentEditor({
     content: "",
   });
 
-  if (!editor) {
-    return null;
-  }
+  useEffect(() => {
+    if (!editor) return;
+
+    editor.commands.setContent(content ?? "");
+  }, [content, editor]);
 
   const addLink = () => {
     const previousUrl = editor.getAttributes("link").href;
@@ -112,7 +116,7 @@ export default function CommentEditor({
       })
       .run();
 
-    event.target.value = "";
+    event.target.value = content ?? "";
   };
 
   const handleSubmit = () => {

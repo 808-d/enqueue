@@ -89,15 +89,20 @@ func (s *PostService) GetPostsByUser(ctx context.Context, userId uuid.UUID) ([]d
 	}
 	return posts, err
 }
-func (s *PostService) GetPostById(ctx context.Context, postId uuid.UUID) (database.Post, error) {
-	posts, err := s.repo.GetPostById(ctx, pgtype.UUID{
+func (s *PostService) GetPostById(ctx context.Context, postId uuid.UUID) (database.Post, []database.Comment, error) {
+	post, err := s.repo.GetPostById(ctx, pgtype.UUID{
 		Bytes: postId,
 		Valid: true,
 	})
 	if err != nil {
-		return database.Post{}, err
+		return database.Post{}, nil, err
 	}
-	return posts, err
+
+	comments, err := s.repo.GetCommentsByPost(ctx, pgtype.UUID{
+		Bytes: postId,
+		Valid: true,
+	})
+	return post, comments, err
 }
 
 func (s *PostService) UpdatePostStatus(ctx context.Context, postId uuid.UUID) (database.Post, error) {

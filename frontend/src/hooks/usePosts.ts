@@ -1,7 +1,7 @@
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { endpoints } from "../utils/endpoints";
-import type { Post } from "../models/post";
+import type { PostData } from "../models/postData";
 
 export function usePosts() {
   const navigate = useNavigate();
@@ -12,8 +12,8 @@ export function usePosts() {
     });
   }
 
-  async function getPostById(id: string): Promise<Post> {
-    const response = await axios.get<Post>(`${endpoints.posts}/${id}`);
+  async function getPostById(id: string): Promise<PostData> {
+    const response = await axios.get<PostData>(`${endpoints.posts}/${id}`);
 
     return response.data;
   }
