@@ -12,12 +12,33 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { catppuccin } from "../theme/catppuccinMocha";
 import { useRef, useState } from "react";
 import axios from "axios";
 import { endpoints } from "../utils/endpoints";
+import { useAppTheme } from "../contexts/themeContext";
 
 export default function Signup() {
+  const { catppuccin } = useAppTheme();
+  const textFieldStyle = {
+    "& .MuiInputBase-input": {
+      color: catppuccin.text,
+    },
+    "& .MuiFilledInput-root": {
+      bgcolor: catppuccin.surface0,
+
+      "&:hover": {
+        bgcolor: catppuccin.surface1,
+      },
+
+      "&.Mui-focused": {
+        bgcolor: catppuccin.surface1,
+      },
+
+      "&:after": {
+        borderBottom: `2px solid ${catppuccin.mauve}`,
+      },
+    },
+  };
   const [signUpState, setSignUpState] = useState({
     username: "",
     name: "",
@@ -294,24 +315,3 @@ export default function Signup() {
     </Box>
   );
 }
-
-const textFieldStyle = {
-  "& .MuiInputBase-input": {
-    color: catppuccin.text,
-  },
-  "& .MuiFilledInput-root": {
-    bgcolor: catppuccin.surface0,
-
-    "&:hover": {
-      bgcolor: catppuccin.surface1,
-    },
-
-    "&.Mui-focused": {
-      bgcolor: catppuccin.surface1,
-    },
-
-    "&:after": {
-      borderBottom: `2px solid ${catppuccin.mauve}`,
-    },
-  },
-};

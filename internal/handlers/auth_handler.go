@@ -5,6 +5,8 @@ import (
 	"enqueue/internal/dtos/auth"
 	"enqueue/internal/dtos/users"
 	"enqueue/internal/services"
+	"enqueue/internal/utils"
+	"errors"
 	"log"
 	"net/http"
 )
@@ -99,21 +101,32 @@ func (h *AuthHandler) Verify(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
-	cookie, err := r.Cookie("token")
-	if err != nil {
-		log.Printf("Error: %v\n", err)
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+func (h *AuthHandler) VerifyEmailChange(w http.ResponseWriter, r *http.Request) {
+	token := r.URL.Query().Get("token")
+	if token == "" {
+		http.Error(w, "missing token", http.StatusBadRequest)
 		return
 	}
 
-	claims, err := h.authService.DecodeToken(cookie.Value)
+	newToken, err := h.authService.VerifyEmailChange(r.Context(), token)
 	if err != nil {
-		log.Printf("Error: %v\n", err)
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		if errors.Is(err, utils.ErrInvalidOrExpiredToken) {
+			http.Error(w, "invalid or expired verification link", http.StatusBadRequest)
+			return
+		}
+		http.Error(w, "failed to confirm email change", http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(claims)
+	http.SetCookie(w, &http.Cookie{
+		Name:     "token",
+		Value:    newToken,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   false, // true in production
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   60 * 60 * 24 * 7,
+	})
+
+	w.WriteHeader(http.StatusOK)
 }

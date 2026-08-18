@@ -15,9 +15,6 @@ import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutlined";
 import RepeatIcon from "@mui/icons-material/Repeat";
 
 import { useState } from "react";
-
-import { catppuccin } from "../../theme/catppuccinMocha";
-
 import { useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
@@ -30,6 +27,7 @@ import { useComments } from "../../hooks/useComments";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import EditIcon from "@mui/icons-material/Edit";
 import { Menu, MenuItem } from "@mui/material";
+import { useAppTheme } from "../../contexts/themeContext";
 type PostCardProps = {
   id: string;
   title: string;
@@ -51,21 +49,6 @@ const statusMap = {
   3: { label: "Hidden", color: "warning" as const },
 };
 
-const style = {
-  position: "absolute" as const,
-  top: "50%",
-  left: "50%",
-  transform: "translate(-50%, -50%)",
-  width: 600,
-  maxWidth: "90vw",
-  bgcolor: catppuccin.base,
-  border: `1px solid ${catppuccin.surface1}`,
-  borderRadius: 2,
-  color: catppuccin.text,
-  boxShadow: 24,
-  p: 3,
-};
-
 export default function PostCard({
   id,
   title,
@@ -79,6 +62,7 @@ export default function PostCard({
   onDelete,
 }: PostCardProps) {
   const statusInfo = statusMap[status as keyof typeof statusMap];
+  const { catppuccin } = useAppTheme();
 
   const [open, setOpen] = useState(false);
   const { createComment, updateComment, deleteComment } = useComments();
@@ -101,7 +85,20 @@ export default function PostCard({
   const handleClose = () => {
     setOpen(false);
   };
-
+  const style = {
+    position: "absolute" as const,
+    top: "50%",
+    left: "50%",
+    transform: "translate(-50%, -50%)",
+    width: 600,
+    maxWidth: "90vw",
+    bgcolor: catppuccin.base,
+    border: `1px solid ${catppuccin.surface1}`,
+    borderRadius: 2,
+    color: catppuccin.text,
+    boxShadow: 24,
+    p: 3,
+  };
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -196,7 +193,7 @@ export default function PostCard({
 
           "&:hover": onClick
             ? {
-                borderColor: "#cba6f7",
+                borderColor: catppuccin.mauve,
                 transform: "translateY(-2px)",
               }
             : undefined,

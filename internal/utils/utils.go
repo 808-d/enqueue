@@ -6,7 +6,7 @@ import (
 	"encoding/hex"
 	"enqueue/internal/structs"
 	"errors"
-	"log"
+	"net/http"
 	"net/smtp"
 	"os"
 	"time"
@@ -87,13 +87,12 @@ func ValidateToken(tokenString string) (*structs.Claims, error) {
 	return claims, err
 }
 
-func GenerateToken(userId, username, avatar, email, role string) (string, error) {
+func GenerateToken(userId, username, email, role string) (string, error) {
 	key := []byte(os.Getenv("JWT_SECRET"))
-	log.Printf("UserID: %s, Email: %s", userId, email)
+
 	claims := jwt.MapClaims{
 		"id":       userId,
 		"username": username,
-		"avatar":   avatar,
 		"email":    email,
 		"role":     role,
 		"exp":      time.Now().Add(24 * time.Hour).Unix(),
@@ -103,4 +102,34 @@ func GenerateToken(userId, username, avatar, email, role string) (string, error)
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
 	return token.SignedString(key)
+}
+
+func GetUserIDFromAuth(r *http.Request) (uuid.UUID, error) {
+	cookie, err := r.Cookie("token")
+	if err != nil {
+		return uuid.UUID{}, ErrUnauthorized
+	}
+
+	claims := jwt.MapClaims{}
+	token, err := jwt.ParseWithClaims(cookie.Value, claims, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.New("unexpected signing method")
+		}
+		return []byte(os.Getenv("JWT_SECRET")), nil
+	})
+	if err != nil || !token.Valid {
+		return uuid.UUID{}, ErrUnauthorized
+	}
+
+	idStr, ok := claims["id"].(string)
+	if !ok {
+		return uuid.UUID{}, ErrUnauthorized
+	}
+
+	userID, err := uuid.Parse(idStr)
+	if err != nil {
+		return uuid.UUID{}, ErrUnauthorized
+	}
+
+	return userID, nil
 }

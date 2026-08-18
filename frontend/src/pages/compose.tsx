@@ -44,7 +44,6 @@ import ImageResize from "tiptap-extension-resize-image";
 import Emoji, { gitHubEmojis } from "@tiptap/extension-emoji";
 import TableChartSharpIcon from "@mui/icons-material/TableChartSharp";
 import { TableKit } from "@tiptap/extension-table";
-import { catppuccin } from "../theme/catppuccinMocha";
 import Link from "@tiptap/extension-link";
 import { useCloudinary } from "../hooks/useCloudinary";
 import { usePosts } from "../hooks/usePosts";
@@ -53,6 +52,7 @@ import { useNavigate } from "react-router-dom";
 import enqueueLogo from "../assets/enqueue.svg";
 import type { Post } from "../models/post";
 import { LinkWidget } from "../components/shared/linkWidget";
+import { useAppTheme } from "../contexts/themeContext";
 const colors = [
   "#cba6f7",
   "#f38ba8",
@@ -77,6 +77,8 @@ const highlights = [
 ];
 
 const Compose = () => {
+  const { catppuccin } = useAppTheme();
+
   const [colorAnchor, setColorAnchor] = useState<null | HTMLElement>(null);
 
   const [highlightAnchor, setHighlightAnchor] = useState<null | HTMLElement>(

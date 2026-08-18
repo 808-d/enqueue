@@ -61,11 +61,14 @@ SELECT id FROM users
 WHERE username = $1 AND is_delete = false LIMIT 1;
 
 -- name: AddPendingEmail :exec
-UPDATE users SET pending_email = $2
-where id = $1 and is_delete = false;
+UPDATE users
+SET pending_email = $2,
+    update_time = now()
+WHERE id = $1 AND is_delete = false;
 
--- name: UpdateEmail :one
+-- name: ConfirmEmailChange :one
 UPDATE users SET email = pending_email,
-pending_email = null
+pending_email = null,
+update_time = now()
 where id = $1 and is_delete = false
 RETURNING *;

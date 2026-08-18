@@ -4,5 +4,5 @@ export type UpdateUserRequest = {
   name: string;
   email: string;
   bio: string | null;
-  avatarUrl: string | null;
+  avatar: string | null;
 };

@@ -9,11 +9,13 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { catppuccin } from "../theme/catppuccinMocha";
 import { useState } from "react";
 import axios from "axios";
 import { endpoints } from "../utils/endpoints";
+import { useAppTheme } from "../contexts/themeContext";
 export default function Login() {
+  const { catppuccin } = useAppTheme();
+
   const [loginState, setLoginState] = useState({
     username: "",
     password: "",

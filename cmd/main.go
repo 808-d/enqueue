@@ -49,7 +49,7 @@ func main() {
 	postService := services.NewPostService(pool)
 	postsHandler := handlers.NewPostsHandler(postService)
 
-	authService := services.NewAuthService(pool)
+	authService := services.NewAuthService(pool, rdb)
 	authHandler := handlers.NewAuthHandler(authService)
 
 	commentService := services.NewCommentService(queries)

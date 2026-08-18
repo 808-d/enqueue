@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"enqueue/internal/dtos/users"
 	"enqueue/internal/services"
+	"enqueue/internal/utils"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -50,16 +51,21 @@ func (h *UsersHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UsersHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
-	var req users.UpdateUserRequest
+	userID, err := utils.GetUserIDFromAuth(r)
+	if err != nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
 
+	var req users.UpdateUserRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	updatedUser, err := h.userService.UpdateUser(
+	token, userResp, emailChangePending, err := h.userService.UpdateUser(
 		r.Context(),
-		req.ID,
+		userID,
 		req.Username,
 		req.Name,
 		req.Avatar,
@@ -71,10 +77,23 @@ func (h *UsersHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(updatedUser)
-}
+	http.SetCookie(w, &http.Cookie{
+		Name:     "token",
+		Value:    token,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   false, // true in production with HTTPS
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   60 * 60 * 24 * 7,
+	})
 
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]any{
+		"user":                 userResp,
+		"email_change_pending": emailChangePending,
+	})
+}
 func (h *UsersHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	var req uuid.UUID
 
@@ -92,4 +111,21 @@ func (h *UsersHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+func (h *UsersHandler) Me(w http.ResponseWriter, r *http.Request) {
+	userID, err := utils.GetUserIDFromAuth(r)
+	if err != nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	userResp, err := h.userService.GetCurrentUser(r.Context(), userID)
+	if err != nil {
+		http.Error(w, "user not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(userResp)
 }

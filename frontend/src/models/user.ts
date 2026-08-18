@@ -4,6 +4,6 @@ export type User = {
   name: string | null;
   email: string;
   bio: string | null;
-  avatarUrl: string | null;
+  avatar: string | null;
   role: string;
 };

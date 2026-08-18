@@ -7,14 +7,15 @@ import {
   Tooltip,
 } from "@mui/material";
 import { useCallback, useState } from "react";
-import { catppuccin } from "../../theme/catppuccinMocha";
 import LinkIcon from "@mui/icons-material/Link";
 import LinkOffIcon from "@mui/icons-material/LinkOff";
 import { Editor } from "@tiptap/react";
+import { useAppTheme } from "../../contexts/themeContext";
 
 export function LinkWidget({ editor }: { editor: Editor | null }) {
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [url, setUrl] = useState("");
+  const { catppuccin } = useAppTheme();
 
   const open = Boolean(anchorEl);
   const isActive = editor?.isActive("link") ?? false;

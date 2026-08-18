@@ -24,8 +24,7 @@ import Emoji, { gitHubEmojis } from "@tiptap/extension-emoji";
 import Link from "@tiptap/extension-link";
 
 import EmojiPicker from "emoji-picker-react";
-
-import { catppuccin } from "../../theme/catppuccinMocha";
+import { useAppTheme } from "../../contexts/themeContext";
 
 type CommentEditorProps = {
   onSubmit: (comment: string) => void;
@@ -38,6 +37,8 @@ export default function CommentEditor({
   onCancel,
   content,
 }: CommentEditorProps) {
+  const { catppuccin } = useAppTheme();
+
   const [emojiAnchor, setEmojiAnchor] = useState<HTMLButtonElement | null>(
     null,
   );

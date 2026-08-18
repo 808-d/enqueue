@@ -4,11 +4,13 @@ import axios from "axios";
 import { Box, CircularProgress, Typography } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ErrorIcon from "@mui/icons-material/Error";
-import { catppuccin } from "../theme/catppuccinMocha";
 import { endpoints } from "../utils/endpoints";
+import { useAppTheme } from "../contexts/themeContext";
 
 function Verify() {
   const [searchParams] = useSearchParams();
+  const { catppuccin } = useAppTheme();
+
   const navigate = useNavigate();
 
   const [status, setStatus] = useState<"loading" | "success" | "error">(

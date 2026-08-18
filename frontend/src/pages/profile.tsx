@@ -15,7 +15,6 @@ import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import { useAuth } from "../contexts/authContext";
 import { Right } from "../components/shared/right";
-import { catppuccin } from "../theme/catppuccinMocha";
 import { Left } from "../components/shared/left";
 import { useEffect, useMemo, useState } from "react";
 import NotesIcon from "@mui/icons-material/Notes";
@@ -30,9 +29,12 @@ import TabPanel from "@mui/lab/TabPanel";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import type { Post } from "../models/post";
 import PostCard from "../components/shared/postCard";
+import { useAppTheme } from "../contexts/themeContext";
 
 export function Profile() {
   const { user } = useAuth();
+  const { catppuccin } = useAppTheme();
+
   const { createPost, getPostsByUser, updatePostStatus } = usePosts();
   const [error, setError] = useState(false);
   const [createAnchorEl, setCreateAnchorEl] = useState<null | HTMLElement>(
@@ -116,7 +118,7 @@ export function Profile() {
               }}
             >
               <Avatar
-                src={user.avatarUrl ?? undefined}
+                src={user.avatar ?? undefined}
                 sx={{
                   width: 110,
                   height: 110,

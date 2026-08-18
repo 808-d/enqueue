@@ -12,13 +12,16 @@ import (
 
 	"enqueue/internal/structs"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 )
 
 type AuthService struct {
 	repo *database.Queries
 	db   *pgxpool.Pool
+	rdb  *redis.Client
 }
 
 func (s *AuthService) ValidateSignUpRequest(context context.Context, username string, email string) (bool, error) {
@@ -35,8 +38,8 @@ func (s *AuthService) ValidateSignUpRequest(context context.Context, username st
 	return !isExists, nil
 }
 
-func NewAuthService(pool *pgxpool.Pool) *AuthService {
-	return &AuthService{repo: database.New(pool), db: pool}
+func NewAuthService(pool *pgxpool.Pool, rdb *redis.Client) *AuthService {
+	return &AuthService{repo: database.New(pool), db: pool, rdb: rdb}
 }
 
 func (s *AuthService) GetToken(
@@ -60,7 +63,7 @@ func (s *AuthService) GetToken(
 		return "", errors.New("invalid username or password")
 
 	}
-	return utils.GenerateToken(user.ID.String(), user.Username, user.Avatar.String, user.Email, user.Role)
+	return utils.GenerateToken(user.ID.String(), user.Username, user.Email, user.Role)
 
 }
 
@@ -115,15 +118,7 @@ func (s *AuthService) Signup(ctx context.Context, username string, email string,
 		return err
 	}
 
-	err = qtx.CreateEmailVerification(ctx, database.CreateEmailVerificationParams{
-		UserID: userId,
-		Token:  token,
-		ExpiresAt: pgtype.Timestamptz{
-			Time:  time.Now().Add(5 * time.Minute),
-			Valid: true,
-		},
-	})
-	if err != nil {
+	if err := s.rdb.Set(ctx, "verify_email:"+token, userId, time.Minute*15).Err(); err != nil {
 		return err
 	}
 
@@ -145,21 +140,52 @@ func (s *AuthService) Signup(ctx context.Context, username string, email string,
 }
 
 func (s *AuthService) Verify(ctx context.Context, token string) (bool, error) {
-	userID, err := s.repo.CheckVerify(ctx, token)
+	token, err := s.rdb.Get(ctx, "verify_email:"+token).Result()
 	if err != nil {
-		return false, err
+		panic(err)
+	}
+	// update email
+	return token != "", nil
+}
+
+func (s *AuthService) VerifyEmailChange(ctx context.Context, token string) (string, error) {
+	val, err := s.rdb.Get(ctx, "verify_email:"+token).Result()
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			return "", err
+		}
+		return "", err
 	}
 
-	err = s.repo.VerifyUser(ctx, userID)
+	userID, err := uuid.Parse(val)
 	if err != nil {
-		return false, err
+		return "", err
 	}
 
-	err = s.repo.DeleteToken(ctx, token)
+	updatedUser, err := s.repo.ConfirmEmailChange(ctx, pgtype.UUID{
+		Bytes: userID,
+		Valid: true,
+	})
 	if err != nil {
-		return false, err
+		return "", err
 	}
-	return true, nil
+
+	// token is single-use — invalidate it now that it's been consumed
+	if err := s.rdb.Del(ctx, "verify_email:"+token).Err(); err != nil {
+		return "", err
+	}
+
+	newToken, err := utils.GenerateToken(
+		updatedUser.ID.String(),
+		updatedUser.Username,
+		updatedUser.Email,
+		updatedUser.Role,
+	)
+	if err != nil {
+		return "", err
+	}
+
+	return newToken, nil
 }
 
 func (s *AuthService) DecodeToken(tokenString string) (*structs.Claims, error) {

@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"enqueue/internal/database"
+	"enqueue/internal/dtos/users"
 	"enqueue/internal/utils"
 	"fmt"
 	"os"
@@ -47,46 +48,42 @@ func (s *UserService) UpdateUser(
 	avatar string,
 	bio string,
 	email string,
-) (string, error) {
-	token := ""
-	user, err := s.GetUser(ctx, id)
+) (string, users.UserResponse, bool, error) {
+	currentUser, err := s.GetUser(ctx, id)
 	if err != nil {
-		return "", err
+		return "", users.UserResponse{}, false, err
 	}
 
-	if user.Email != email {
-		err = s.RequestEmailChange(ctx, id, pgtype.Text{
-			String: email,
-			Valid:  true,
-		})
-	} else {
-		user, err := s.repo.UpdateUserNotIncludeEmail(ctx, database.UpdateUserNotIncludeEmailParams{
-			ID: pgtype.UUID{
-				Bytes: id,
-				Valid: true,
-			},
-			Username: username,
-			Avatar: pgtype.Text{
-				String: avatar,
-				Valid:  true,
-			},
-			Name: pgtype.Text{
-				String: name,
-				Valid:  true,
-			},
-			Bio: pgtype.Text{
-				String: bio,
-				Valid:  true,
-			},
-		})
-		if err != nil {
-			return "", err
+	emailChanged := currentUser.Email != email
+
+	updatedUser, err := s.repo.UpdateUserNotIncludeEmail(ctx, database.UpdateUserNotIncludeEmailParams{
+		ID:       pgtype.UUID{Bytes: id, Valid: true},
+		Username: username,
+		Avatar:   pgtype.Text{String: avatar, Valid: true},
+		Name:     pgtype.Text{String: name, Valid: true},
+		Bio:      pgtype.Text{String: bio, Valid: true},
+	})
+	if err != nil {
+		return "", users.UserResponse{}, false, err
+	}
+
+	if emailChanged {
+		if err := s.RequestEmailChange(ctx, id, email); err != nil {
+			return "", users.UserResponse{}, false, err
 		}
-
-		token, err = utils.GenerateToken(user.ID.String(), user.Username, user.Avatar.String, user.Email, user.Role)
 	}
-	return token, err
 
+	token, err := utils.GenerateToken(
+		updatedUser.ID.String(),
+		updatedUser.Username,
+		updatedUser.Email,
+		updatedUser.Role,
+	)
+	if err != nil {
+		return "", users.UserResponse{}, false, err
+	}
+
+	return token, toUserResponse(updatedUser), emailChanged, nil
 }
 
 func (s *UserService) DeleteUser(ctx context.Context, id uuid.UUID) error {
@@ -103,31 +100,39 @@ func (s *UserService) GetUser(ctx context.Context, id uuid.UUID) (database.User,
 	})
 }
 
-func (s *UserService) RequestEmailChange(ctx context.Context, id uuid.UUID, email pgtype.Text) error {
-	err := s.repo.AddPendingEmail(ctx, database.AddPendingEmailParams{
-		ID: pgtype.UUID{
-			Bytes: id,
-			Valid: true,
-		},
-		PendingEmail: email,
+func (s *UserService) GetCurrentUser(ctx context.Context, id uuid.UUID) (users.UserResponse, error) {
+	user, err := s.repo.GetUser(ctx, pgtype.UUID{
+		Bytes: id,
+		Valid: true,
 	})
 	if err != nil {
+		return users.UserResponse{}, err
+	}
+
+	return toUserResponse(user), nil
+}
+
+func (s *UserService) RequestEmailChange(ctx context.Context, id uuid.UUID, email string) error {
+	if err := s.repo.AddPendingEmail(ctx, database.AddPendingEmailParams{
+		ID:           pgtype.UUID{Bytes: id, Valid: true},
+		PendingEmail: pgtype.Text{String: email, Valid: true},
+	}); err != nil {
 		return err
 	}
+
 	token, err := utils.GenerateVerificationToken()
 	if err != nil {
 		return err
 	}
 
-	err = s.rdb.Set(ctx, "verify_email:"+token, id.String(), time.Minute*15).Err()
-	if err != nil {
+	if err := s.rdb.Set(ctx, "verify_email:"+token, id.String(), time.Minute*15).Err(); err != nil {
 		return err
 	}
 
 	return utils.SendEmail(
 		os.Getenv("SMTP_EMAIL"),
 		os.Getenv("APP_PASSWORD"),
-		email.String,
+		email,
 		"Confirm your new Enqueue email",
 		fmt.Sprintf(`Hi,
 
@@ -141,4 +146,15 @@ If you didn't request this, you can safely ignore this email — your account em
 Thanks,
 The Enqueue team`, os.Getenv("FRONTEND_URL"), token),
 	)
+}
+
+func toUserResponse(u database.User) users.UserResponse {
+	return users.UserResponse{
+		ID:       u.ID.String(), // adjust based on your actual pgtype.UUID -> string conversion
+		Username: u.Username,
+		Name:     u.Name.String,
+		Email:    u.Email,
+		Avatar:   u.Avatar.String,
+		Bio:      u.Bio.String,
+	}
 }

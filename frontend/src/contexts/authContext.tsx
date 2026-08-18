@@ -14,6 +14,7 @@ type AuthContextType = {
   user: User | null;
   loading: boolean;
   setUser: React.Dispatch<React.SetStateAction<User | null>>;
+  refreshUser: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -22,26 +23,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const isFetched = useRef(false);
+
+  const fetchUser = async () => {
+    try {
+      const response = await axios.get<User>(endpoints.me, {
+        withCredentials: true,
+      });
+      setUser(response.data);
+    } catch {
+      setUser(null);
+    }
+  };
+
   useEffect(() => {
     if (isFetched.current) return;
-
     isFetched.current = true;
 
-    axios
-      .get(endpoints.me, { withCredentials: true })
-      .then((response) => {
-        setUser(response.data);
-      })
-      .catch(() => {
-        setUser(null);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+    fetchUser().finally(() => setLoading(false));
   }, []);
 
+  const refreshUser = async () => {
+    await fetchUser();
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, setUser }}>
+    <AuthContext.Provider value={{ user, loading, setUser, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

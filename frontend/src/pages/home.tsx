@@ -12,11 +12,10 @@ import {
 import type { Post } from "../models/post";
 import { useAuth } from "../contexts/authContext";
 import { Left } from "../components/shared/left";
-import { catppuccin } from "../theme/catppuccinMocha";
 import { Right } from "../components/shared/right";
+import { useAppTheme } from "../contexts/themeContext";
 function Home() {
   const { user, loading } = useAuth();
-
   if (loading) {
     return <div>Loading...</div>;
   }
@@ -34,6 +33,8 @@ function Home() {
 }
 
 function Mid() {
+  const { catppuccin } = useAppTheme();
+
   const [posts] = useState<Post[]>([
     {
       id: crypto.randomUUID(),
