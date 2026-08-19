@@ -5,6 +5,7 @@ import (
 	"enqueue/internal/database"
 	"enqueue/internal/dtos/users"
 	"enqueue/internal/utils"
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -13,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type UserService struct {
@@ -136,15 +138,15 @@ func (s *UserService) RequestEmailChange(ctx context.Context, id uuid.UUID, emai
 		"Confirm your new Enqueue email",
 		fmt.Sprintf(`Hi,
 
-You requested to change your Enqueue account email to this address.
-Please click the link below to confirm the change:
+		You requested to change your Enqueue account email to this address.
+		Please click the link below to confirm the change:
 
-%s/verify-email-change?token=%s
+		%s/verify-email-change?token=%s
 
-If you didn't request this, you can safely ignore this email — your account email will not change.
+		If you didn't request this, you can safely ignore this email — your account email will not change.
 
-Thanks,
-The Enqueue team`, os.Getenv("FRONTEND_URL"), token),
+		Thanks,
+		The Enqueue team`, os.Getenv("FRONTEND_URL"), token),
 	)
 }
 
@@ -157,4 +159,48 @@ func toUserResponse(u database.User) users.UserResponse {
 		Avatar:   u.Avatar.String,
 		Bio:      u.Bio.String,
 	}
+}
+
+func (s *UserService) ChangePassword(
+	ctx context.Context,
+	userID uuid.UUID,
+	currentPassword string,
+	newPassword string,
+) error {
+	user, err := s.repo.GetUser(ctx, pgtype.UUID{
+		Bytes: userID,
+		Valid: true,
+	})
+	if err != nil {
+		return err
+	}
+
+	// Verify current password
+	if err := bcrypt.CompareHashAndPassword(
+		[]byte(user.Password.String),
+		[]byte(currentPassword),
+	); err != nil {
+		return errors.New("current password is incorrect")
+	}
+
+	// Hash new password
+	newHash, err := bcrypt.GenerateFromPassword(
+		[]byte(newPassword),
+		bcrypt.DefaultCost,
+	)
+	if err != nil {
+		return err
+	}
+
+	// Save new hash
+	return s.repo.UpdatePassword(ctx, database.UpdatePasswordParams{
+		ID: pgtype.UUID{
+			Bytes: userID,
+			Valid: true,
+		},
+		Password: pgtype.Text{
+			String: string(newHash),
+			Valid:  true,
+		},
+	})
 }

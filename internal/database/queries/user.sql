@@ -72,3 +72,14 @@ pending_email = null,
 update_time = now()
 where id = $1 and is_delete = false
 RETURNING *;
+
+
+-- name: UpdatePassword :exec
+UPDATE users SET password = $2,
+update_time = now()
+where id = $1 and is_delete = false;
+
+
+-- name: GetUserByUsername :one
+SELECT * FROM users
+WHERE username = $1 AND is_delete = false LIMIT 1;

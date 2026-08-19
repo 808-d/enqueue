@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type AuthService struct {
@@ -48,27 +49,28 @@ func (s *AuthService) GetToken(
 	password string,
 ) (string, error) {
 
-	hashedPassword := utils.Hash256(password)
-	user, err := s.repo.GetUserByUsernameAndPassword(
-		ctx,
-		database.GetUserByUsernameAndPasswordParams{
-			Username: username,
-			Password: pgtype.Text{
-				String: hashedPassword,
-				Valid:  true,
-			},
-		},
-	)
+	user, err := s.repo.GetUserByUsername(ctx, username)
 	if err != nil {
 		return "", errors.New("invalid username or password")
-
 	}
+
+	// Verify current password
+	if err := bcrypt.CompareHashAndPassword(
+		[]byte(password),
+		[]byte(user.Password.String),
+	); err != nil {
+		return "", errors.New("invalid username or password")
+	}
+
 	return utils.GenerateToken(user.ID.String(), user.Username, user.Email, user.Role)
 
 }
 
 func (s *AuthService) CreateUser(ctx context.Context, username string, email string, password string) (pgtype.UUID, error) {
-	hashedPassword := utils.Hash256(password)
+	hashedPassword, err := utils.HashPassword(password)
+	if err != nil {
+		return pgtype.UUID{}, err
+	}
 	id, err := s.repo.CreateUser(ctx, database.CreateUserParams{
 		Username: username,
 		Email:    email,
@@ -99,7 +101,10 @@ func (s *AuthService) Signup(ctx context.Context, username string, email string,
 	}
 
 	// create user / with email_verified = false
-	hashedPassword := utils.Hash256(password)
+	hashedPassword, err := utils.HashPassword(password)
+	if err != nil {
+		return err
+	}
 	userId, err := qtx.CreateUser(ctx, database.CreateUserParams{
 		Username: username,
 		Email:    email,
@@ -194,4 +199,40 @@ func (s *AuthService) DecodeToken(tokenString string) (*structs.Claims, error) {
 		return nil, errors.New("invalid token")
 	}
 	return token, err
+}
+
+func (s *AuthService) RequestPasswordReset(ctx context.Context, username string) error {
+	user, err := s.repo.GetUserByUsername(ctx, username)
+	if err != nil {
+		// user not found — silently return nil so the handler's generic response holds
+		return nil
+	}
+
+	token, err := utils.GenerateVerificationToken()
+	if err != nil {
+		return err
+	}
+
+	if err := s.rdb.Set(ctx, "reset_password:"+token, user.ID.Bytes, time.Minute*15).Err(); err != nil {
+		return err
+	}
+
+	return utils.SendEmail(
+		os.Getenv("SMTP_EMAIL"),
+		os.Getenv("APP_PASSWORD"),
+		user.Email,
+		"Reset your Enqueue password",
+		fmt.Sprintf(`Hi,
+
+We received a request to reset your Enqueue password. Click the link below to choose a new one:
+
+%s/reset-password?token=%s
+
+If you didn't request this, you can safely ignore this email — your password will not change.
+
+This link expires in 15 minutes.
+
+Thanks,
+The Enqueue team`, os.Getenv("FRONTEND_URL"), token),
+	)
 }

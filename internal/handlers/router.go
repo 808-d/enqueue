@@ -11,6 +11,7 @@ func RegisterUserRoutes(mux *http.ServeMux, h *UsersHandler) {
 	mux.HandleFunc("PATCH /users", h.UpdateUser)
 	mux.HandleFunc("DELETE /users", h.DeleteUser)
 	mux.HandleFunc("GET /me", h.Me)
+	mux.Handle("PATCH /password", middlewares.AuthMiddleware(http.HandlerFunc(h.ChangePassword)))
 }
 func RegisterPostRoutes(mux *http.ServeMux, h *PostsHandler) {
 	mux.HandleFunc("GET /posts", h.GetPosts)

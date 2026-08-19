@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"enqueue/internal/structs"
 	"errors"
+	"math/big"
 	"net/http"
 	"net/smtp"
 	"os"
@@ -13,7 +14,16 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 )
+
+func HashPassword(password string) (string, error) {
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return "", err
+	}
+	return string(hash), nil
+}
 
 func Hash256(str string) string {
 	result := sha256.Sum256([]byte(str))
@@ -132,4 +142,24 @@ func GetUserIDFromAuth(r *http.Request) (uuid.UUID, error) {
 	}
 
 	return userID, nil
+}
+
+func GenerateRandomPassword(length int) string {
+	const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*"
+
+	result := make([]byte, length)
+
+	for i := range result {
+		n, err := rand.Int(
+			rand.Reader,
+			big.NewInt(int64(len(chars))),
+		)
+		if err != nil {
+			panic(err)
+		}
+
+		result[i] = chars[n.Int64()]
+	}
+
+	return string(result)
 }

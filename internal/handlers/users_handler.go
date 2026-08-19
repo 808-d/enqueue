@@ -112,6 +112,26 @@ func (h *UsersHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusNoContent)
 }
+func (h *UsersHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value("id").(uuid.UUID)
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	var req *users.ChangePasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	err := h.userService.ChangePassword(r.Context(), userID, req.Passowrd, req.NewPassowrd)
+	if err != nil {
+		http.Error(w, "failed to update password", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+}
 func (h *UsersHandler) Me(w http.ResponseWriter, r *http.Request) {
 	userID, err := utils.GetUserIDFromAuth(r)
 	if err != nil {

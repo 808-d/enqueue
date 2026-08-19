@@ -14,4 +14,5 @@ export const endpoints = {
   likes: `${API_BASE_URL}/likes`,
   comments: `${API_BASE_URL}/comments`,
   changePassword: `${API_BASE_URL}/password`,
+  forgotPassword: `${API_BASE_URL}/forgot-password`,
 };

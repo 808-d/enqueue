@@ -4,6 +4,7 @@ import { useAppTheme } from "../../contexts/themeContext";
 import type { SxProps, Theme } from "@mui/material";
 import axios from "axios";
 import { endpoints } from "../../utils/endpoints";
+import { useAuth } from "../../contexts/authContext";
 
 export default function SecurityTab({ fieldSx }: { fieldSx: SxProps<Theme> }) {
   const [currentPassword, setCurrentPassword] = useState("");
@@ -17,7 +18,6 @@ export default function SecurityTab({ fieldSx }: { fieldSx: SxProps<Theme> }) {
   const handleChangePassword = async () => {
     setPasswordError("");
     setPasswordSuccess(false);
-
     if (!currentPassword || !newPassword || !confirmPassword) {
       setPasswordError("All fields are required.");
       return;
@@ -34,7 +34,6 @@ export default function SecurityTab({ fieldSx }: { fieldSx: SxProps<Theme> }) {
         { currentPassword, newPassword },
         { withCredentials: true },
       );
-      await new Promise((r) => setTimeout(r, 500));
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");

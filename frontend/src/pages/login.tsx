@@ -37,6 +37,13 @@ export default function Login() {
     }
   }
 
+  const fogotPasword = () => {
+    axios.post(
+      endpoints.forgotPassword,
+      { username: loginState.username },
+      { withCredentials: true },
+    );
+  };
   return (
     <Box
       sx={{
@@ -167,6 +174,18 @@ export default function Login() {
               >
                 Sign In
               </Button>
+
+              <Box sx={{ textAlign: "center", mt: -1 }}>
+                <Typography
+                  sx={{
+                    color: catppuccin.mauve,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  Forgot password?
+                </Typography>
+              </Box>
 
               <Typography
                 variant="body2"

@@ -142,6 +142,32 @@ func (q *Queries) GetUser(ctx context.Context, id pgtype.UUID) (User, error) {
 	return i, err
 }
 
+const getUserByUsername = `-- name: GetUserByUsername :one
+SELECT is_delete, create_time, update_time, id, username, email, avatar, password, role, email_verified, bio, name, pending_email FROM users
+WHERE username = $1 AND is_delete = false LIMIT 1
+`
+
+func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByUsername, username)
+	var i User
+	err := row.Scan(
+		&i.IsDelete,
+		&i.CreateTime,
+		&i.UpdateTime,
+		&i.ID,
+		&i.Username,
+		&i.Email,
+		&i.Avatar,
+		&i.Password,
+		&i.Role,
+		&i.EmailVerified,
+		&i.Bio,
+		&i.Name,
+		&i.PendingEmail,
+	)
+	return i, err
+}
+
 const getUserByUsernameAndPassword = `-- name: GetUserByUsernameAndPassword :one
 SELECT is_delete, create_time, update_time, id, username, email, avatar, password, role, email_verified, bio, name, pending_email FROM users
 WHERE username = $1 AND password = $2 AND is_delete = false LIMIT 1
@@ -221,6 +247,22 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const updatePassword = `-- name: UpdatePassword :exec
+UPDATE users SET password = $2,
+update_time = now()
+where id = $1 and is_delete = false
+`
+
+type UpdatePasswordParams struct {
+	ID       pgtype.UUID
+	Password pgtype.Text
+}
+
+func (q *Queries) UpdatePassword(ctx context.Context, arg UpdatePasswordParams) error {
+	_, err := q.db.Exec(ctx, updatePassword, arg.ID, arg.Password)
+	return err
 }
 
 const updateUserNotIncludeEmail = `-- name: UpdateUserNotIncludeEmail :one

@@ -30,7 +30,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import type { Post } from "../models/post";
 import PostCard from "../components/shared/postCard";
 import { useAppTheme } from "../contexts/themeContext";
-
+import { Link } from "react-router-dom";
 export function Profile() {
   const { user } = useAuth();
   const { catppuccin } = useAppTheme();
@@ -92,7 +92,7 @@ export function Profile() {
   return (
     <Grid container sx={{ minHeight: "100vh" }}>
       <Left />
-      <Grid size={{ xs: 12, md: 8 }}>
+      <Grid size={{ xs: 11, md: 8 }}>
         <Box
           sx={{
             minHeight: "100vh",
@@ -320,6 +320,8 @@ export function Profile() {
 
                   <Grid size="grow">
                     <Button
+                      component={Link}
+                      to="/settings"
                       fullWidth
                       variant="outlined"
                       size="large"
