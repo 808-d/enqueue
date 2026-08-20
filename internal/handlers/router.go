@@ -27,6 +27,8 @@ func RegisterAuthRoutes(mux *http.ServeMux, h *AuthHandler) {
 	mux.HandleFunc("POST /signup", h.SignUp)
 	mux.HandleFunc("POST /verify", h.Verify)
 	mux.HandleFunc("GET /verify-email-change", h.VerifyEmailChange)
+	mux.HandleFunc("POST /forgot-password", h.ForgotPassword)
+	mux.HandleFunc("POST /reset-password", h.ResetPassword)
 }
 func RegisterCommentsRoutes(mux *http.ServeMux, h *CommentsHandler) {
 	// mux.HandleFunc("GET /comments", h.Login)

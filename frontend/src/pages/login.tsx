@@ -37,7 +37,7 @@ export default function Login() {
     }
   }
 
-  const fogotPasword = () => {
+  const handleForgotPassword = () => {
     axios.post(
       endpoints.forgotPassword,
       { username: loginState.username },
@@ -177,10 +177,12 @@ export default function Login() {
 
               <Box sx={{ textAlign: "center", mt: -1 }}>
                 <Typography
+                  onClick={handleForgotPassword}
                   sx={{
                     color: catppuccin.mauve,
                     fontWeight: 600,
                     cursor: "pointer",
+                    "&:hover": { textDecoration: "underline" },
                   }}
                 >
                   Forgot password?
@@ -209,6 +211,7 @@ export default function Login() {
             </Stack>
           </CardContent>
         </Card>
+        error
       </Container>
     </Box>
   );

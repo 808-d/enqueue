@@ -56,8 +56,8 @@ func (s *AuthService) GetToken(
 
 	// Verify current password
 	if err := bcrypt.CompareHashAndPassword(
-		[]byte(password),
 		[]byte(user.Password.String),
+		[]byte(password),
 	); err != nil {
 		return "", errors.New("invalid username or password")
 	}
@@ -213,7 +213,7 @@ func (s *AuthService) RequestPasswordReset(ctx context.Context, username string)
 		return err
 	}
 
-	if err := s.rdb.Set(ctx, "reset_password:"+token, user.ID.Bytes, time.Minute*15).Err(); err != nil {
+	if err := s.rdb.Set(ctx, "reset_password:"+token, user.ID.String(), time.Minute*15).Err(); err != nil {
 		return err
 	}
 
@@ -235,4 +235,56 @@ This link expires in 15 minutes.
 Thanks,
 The Enqueue team`, os.Getenv("FRONTEND_URL"), token),
 	)
+}
+
+func (s *AuthService) ResetPassword(
+	ctx context.Context,
+	token string,
+	password string,
+) error {
+	userID, err := s.rdb.Get(
+		ctx,
+		"reset_password:"+token,
+	).Result()
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			return errors.New("invalid or expired reset token")
+		}
+
+		return fmt.Errorf("get reset token: %w", err)
+	}
+
+	parsedUserID, err := uuid.Parse(userID)
+	if err != nil {
+		return fmt.Errorf("invalid user id in reset token: %w", err)
+	}
+
+	hashPassword, err := utils.HashPassword(password)
+	if err != nil {
+		return fmt.Errorf("hash password: %w", err)
+	}
+
+	err = s.repo.UpdatePassword(ctx, database.UpdatePasswordParams{
+		ID: pgtype.UUID{
+			Bytes: parsedUserID,
+			Valid: true,
+		},
+		Password: pgtype.Text{
+			String: hashPassword,
+			Valid:  true,
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("update password: %w", err)
+	}
+
+	// Token is one-time use.
+	if err := s.rdb.Del(
+		ctx,
+		"reset_password:"+token,
+	).Err(); err != nil {
+		return fmt.Errorf("delete reset token: %w", err)
+	}
+
+	return nil
 }

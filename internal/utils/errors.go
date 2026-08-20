@@ -8,4 +8,5 @@ var (
 	ErrUnauthorized          = errors.New("unauthorized")
 	ErrUserNotFound          = errors.New("user not found")
 	ErrCannotFollowSelf      = errors.New("cannot follow yourself")
+	ErrInvalidResetToken     = errors.New("invalid or expired reset token")
 )

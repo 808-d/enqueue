@@ -152,3 +152,48 @@ func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 		"message": "If an account with that username exists, a password reset link has been sent.",
 	})
 }
+
+func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
+	var req users.ResetPasswordRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.Token == "" {
+		http.Error(w, "missing token", http.StatusBadRequest)
+		return
+	}
+
+	if req.NewPassword == "" {
+		http.Error(w, "password is required", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.authService.ResetPassword(
+		r.Context(),
+		req.Token,
+		req.NewPassword,
+	); err != nil {
+		if errors.Is(err, utils.ErrInvalidResetToken) {
+			http.Error(
+				w,
+				"invalid or expired reset token",
+				http.StatusBadRequest,
+			)
+			return
+		}
+
+		log.Printf("failed to reset password: %v", err)
+
+		http.Error(
+			w,
+			"failed to reset password",
+			http.StatusInternalServerError,
+		)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}

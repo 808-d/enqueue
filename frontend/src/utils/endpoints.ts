@@ -15,4 +15,5 @@ export const endpoints = {
   comments: `${API_BASE_URL}/comments`,
   changePassword: `${API_BASE_URL}/password`,
   forgotPassword: `${API_BASE_URL}/forgot-password`,
+  resetPassword: `${API_BASE_URL}/reset-password`,
 };
