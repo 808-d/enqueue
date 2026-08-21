@@ -224,16 +224,16 @@ func (s *AuthService) RequestPasswordReset(ctx context.Context, username string)
 		"Reset your Enqueue password",
 		fmt.Sprintf(`Hi,
 
-We received a request to reset your Enqueue password. Click the link below to choose a new one:
+		We received a request to reset your Enqueue password. Click the link below to choose a new one:
 
-%s/reset-password?token=%s
+		%s/reset-password?token=%s
 
-If you didn't request this, you can safely ignore this email — your password will not change.
+		If you didn't request this, you can safely ignore this email — your password will not change.
 
-This link expires in 15 minutes.
+		This link expires in 15 minutes.
 
-Thanks,
-The Enqueue team`, os.Getenv("FRONTEND_URL"), token),
+		Thanks,
+		The Enqueue team`, os.Getenv("FRONTEND_URL"), token),
 	)
 }
 

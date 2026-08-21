@@ -16,6 +16,9 @@ import {
 
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
+import Collaboration from "@tiptap/extension-collaboration";
+import * as Y from "yjs";
+import { WebsocketProvider } from "y-websocket";
 
 import Underline from "@tiptap/extension-underline";
 import TextAlign from "@tiptap/extension-text-align";
@@ -90,6 +93,15 @@ const Compose = () => {
   const postId = searchParams.get("id");
   const [post, setPost] = useState<Post | null>(null);
 
+  // Collaboration setup
+  const ydoc = new Y.Doc();
+  const provider = new WebsocketProvider(
+    "ws://localhost:1234",
+    `post-${postId || "new"}`,
+    ydoc,
+  );
+  const ytext = ydoc.getText("content");
+
   useEffect(() => {
     if (!postId) return;
 
@@ -109,12 +121,24 @@ const Compose = () => {
     fetchPost();
   }, [postId]);
 
+  // Cleanup provider on unmount
+  useEffect(() => {
+    return () => {
+      provider.destroy();
+      ydoc.destroy();
+    };
+  }, []);
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
         heading: {
           levels: [1, 2, 3, 4, 5, 6],
         },
+      }),
+
+      Collaboration.configure({
+        document: ydoc,
       }),
 
       Underline,
@@ -220,7 +244,9 @@ const Compose = () => {
   useEffect(() => {
     if (!editor || !post) return;
 
-    editor.commands.setContent(post.Content ?? "");
+    editor.commands.setContent(post.Content);
+    ytext.delete(0, ytext.length);
+    ytext.insert(0, post.Content ?? "");
   }, [editor, post]);
   const { uploadImage } = useCloudinary();
   const { updatePost, getPostById } = usePosts();
