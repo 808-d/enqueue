@@ -15,6 +15,7 @@ import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutlined";
 import RepeatIcon from "@mui/icons-material/Repeat";
 
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
@@ -63,6 +64,20 @@ export default function PostCard({
 }: PostCardProps) {
   const statusInfo = statusMap[status as keyof typeof statusMap];
   const { catppuccin } = useAppTheme();
+  const navigate = useNavigate();
+
+  const handleCardClick = () => {
+    if (onClick) {
+      onClick();
+      return;
+    }
+
+    if (status === 1) {
+      navigate(`/compose?id=${id}`);
+    } else if (status === 2) {
+      navigate(`/read?id=${id}`);
+    }
+  };
 
   const [open, setOpen] = useState(false);
   const { createComment, updateComment, deleteComment } = useComments();
@@ -182,16 +197,16 @@ export default function PostCard({
   return (
     <>
       <Card
-        onClick={onClick}
+        onClick={handleCardClick}
         sx={{
-          cursor: onClick ? "pointer" : "default",
+          cursor: onClick || status === 1 || status === 2 ? "pointer" : "default",
           backgroundColor: "#313244",
           color: "#cdd6f4",
           border: "1px solid #45475a",
           borderRadius: 2,
           transition: "0.2s",
 
-          "&:hover": onClick
+          "&:hover": onClick || status === 1 || status === 2
             ? {
                 borderColor: catppuccin.mauve,
                 transform: "translateY(-2px)",
@@ -248,7 +263,7 @@ export default function PostCard({
                   <MenuItem
                     onClick={() => {
                       setMenuAnchor(null);
-                      onClick?.();
+                      navigate(`/compose?id=${id}`);
                     }}
                   >
                     <EditIcon fontSize="small" sx={{ mr: 1 }} />
