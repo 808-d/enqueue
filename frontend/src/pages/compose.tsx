@@ -88,7 +88,7 @@ const Compose = () => {
   const [searchParams] = useSearchParams();
 
   const postId = searchParams.get("id");
-  const [post, setPost] = useState<Post>();
+  const [post, setPost] = useState<Post | null>(null);
 
   useEffect(() => {
     if (!postId) return;
@@ -96,8 +96,10 @@ const Compose = () => {
     const fetchPost = async () => {
       try {
         const response = await getPostById(postId);
-        if (response) {
-          setPost(response);
+
+        if (response?.post) {
+          setPost(response.post);
+          setTitle(response.post.Title ?? "No title");
         }
       } catch (err) {
         console.error("Failed to get post:", err);
@@ -218,7 +220,7 @@ const Compose = () => {
   useEffect(() => {
     if (!editor || !post) return;
 
-    editor.commands.setContent(post.Content);
+    editor.commands.setContent(post.Content ?? "");
   }, [editor, post]);
   const { uploadImage } = useCloudinary();
   const { updatePost, getPostById } = usePosts();
@@ -267,10 +269,13 @@ const Compose = () => {
   const [title, setTitle] = useState("No title");
 
   const handleUpdatePost = async (id: string, status: number) => {
-    try {
-      const content = editor!.getText();
+    if (!editor) return;
 
-      await updatePost(id, title, content, status);
+    try {
+      const content = editor.getHTML();
+      const nextTitle = title.trim() || "No title";
+
+      await updatePost(id, nextTitle, content, status);
 
       if (status === 1) {
         setSnackbar({
@@ -278,11 +283,18 @@ const Compose = () => {
           message: "Draft saved successfully",
           severity: "success",
         });
+      } else if (status === 2) {
+        setSnackbar({
+          open: true,
+          message: "Post published successfully",
+          severity: "success",
+        });
       }
     } catch (err) {
       setSnackbar({
         open: true,
-        message: "Failed to save draft",
+        message:
+          status === 1 ? "Failed to save draft" : "Failed to publish post",
         severity: "error",
       });
     }
@@ -352,7 +364,8 @@ const Compose = () => {
                 color: catppuccin.text,
                 borderColor: catppuccin.surface1,
               }}
-              onClick={() => handleUpdatePost(postId!, 2)}
+              disabled={!postId}
+              onClick={() => postId && handleUpdatePost(postId, 1)}
             >
               Save Draft
             </Button>
@@ -369,6 +382,8 @@ const Compose = () => {
                   bgcolor: catppuccin.pink,
                 },
               }}
+              disabled={!postId}
+              onClick={() => postId && handleUpdatePost(postId, 2)}
             >
               Publish
             </Button>
@@ -476,7 +491,7 @@ const Compose = () => {
                   editor.chain().focus().toggleHeading({ level: 5 }).run();
                 }
                 if (value === "h6") {
-                  editor.chain().focus().toggleHeading({ level: 5 }).run();
+                  editor.chain().focus().toggleHeading({ level: 6 }).run();
                 }
               }}
               sx={{
