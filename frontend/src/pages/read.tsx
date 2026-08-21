@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useRef, useState } from "react";
+import { useEffect, useReducer, useState } from "react";
 import {
   Box,
   CircularProgress,
@@ -9,7 +9,6 @@ import {
   IconButton,
   Stack,
   Card,
-  CardContent,
   MenuItem,
   Menu,
 } from "@mui/material";
@@ -23,7 +22,6 @@ import CommentEditor from "../components/shared/commentEditor";
 import type { Comment } from "../models/comment";
 import { useComments } from "../hooks/useComments";
 import { useAuth } from "../contexts/authContext";
-import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { commentReducer, initialState } from "../reducers/commentReducer";
 import CommentCard from "../components/shared/commentCard";
 
@@ -340,7 +338,7 @@ export default function Read() {
                   <CommentCard
                     key={comment.ID}
                     comment={comment}
-                    currentUserId={user?.id}
+                    user={user}
                     onMenuOpen={handleCommentMenuOpen}
                   />
                 </Card>

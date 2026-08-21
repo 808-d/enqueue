@@ -1,4 +1,5 @@
 import {
+  Avatar,
   Box,
   Card,
   CardContent,
@@ -9,19 +10,20 @@ import {
 
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import type { Comment } from "../../models/comment";
+import type { User } from "../../models/user";
 
 type CommentCardProps = {
   comment: Comment;
-  currentUserId?: string;
+  user?: User | null;
   onMenuOpen: (event: React.MouseEvent<HTMLElement>, comment: Comment) => void;
 };
 
 export default function CommentCard({
   comment,
-  currentUserId,
+  user,
   onMenuOpen,
 }: CommentCardProps) {
-  const isOwner = comment.UserID === currentUserId;
+  const isOwner = comment.UserID === user?.id;
 
   return (
     <Card
@@ -47,16 +49,38 @@ export default function CommentCard({
               justifyContent: "space-between",
             }}
           >
-            <Typography
-              variant="subtitle2"
+            <Box
               sx={{
-                color: "#cba6f7",
-                fontWeight: 600,
-                textAlign: "left",
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
               }}
             >
-              {/* username later */}
-            </Typography>
+              <Avatar
+                src={user?.avatar ?? undefined}
+                sx={{
+                  width: 32,
+                  height: 32,
+                  bgcolor: "#cba6f7",
+                  color: "#1e1e2e",
+                  fontSize: 14,
+                  fontWeight: 700,
+                }}
+              >
+                {user?.username.charAt(0).toUpperCase()}
+              </Avatar>
+
+              <Typography
+                variant="subtitle2"
+                sx={{
+                  color: "#cba6f7",
+                  fontWeight: 600,
+                  textAlign: "left",
+                }}
+              >
+                {user?.username ?? "Unknown user"}
+              </Typography>
+            </Box>
 
             {isOwner && (
               <IconButton
