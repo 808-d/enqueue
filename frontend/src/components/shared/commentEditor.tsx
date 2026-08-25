@@ -1,13 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
-import {
-  Box,
-  Button,
-  IconButton,
-  Popover,
-  Stack,
-  Tooltip,
-} from "@mui/material";
+import { Box, Button, IconButton, Stack, Tooltip } from "@mui/material";
 
 import FormatBoldIcon from "@mui/icons-material/FormatBold";
 import FormatItalicIcon from "@mui/icons-material/FormatItalic";
@@ -17,13 +10,9 @@ import ImageIcon from "@mui/icons-material/Image";
 import EmojiEmotionsIcon from "@mui/icons-material/EmojiEmotions";
 
 import { EditorContent, useEditor } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import Underline from "@tiptap/extension-underline";
-import Image from "@tiptap/extension-image";
-import Emoji, { gitHubEmojis } from "@tiptap/extension-emoji";
-import Link from "@tiptap/extension-link";
+import { commentEditorExtensions } from "../common/commentEditorExtensions";
+import EmojiPickerPopover from "../common/emojiPickerPopover";
 
-import EmojiPicker from "emoji-picker-react";
 import { useAppTheme } from "../../contexts/themeContext";
 
 type CommentEditorProps = {
@@ -39,30 +28,8 @@ export default function CommentEditor({
 }: CommentEditorProps) {
   const { catppuccin } = useAppTheme();
 
-  const [emojiAnchor, setEmojiAnchor] = useState<HTMLButtonElement | null>(
-    null,
-  );
-
   const editor = useEditor({
-    extensions: [
-      StarterKit,
-
-      Underline,
-
-      Image,
-
-      Emoji.configure({
-        emojis: gitHubEmojis,
-        enableEmoticons: true,
-      }),
-
-      Link.configure({
-        openOnClick: false,
-        autolink: true,
-        defaultProtocol: "https",
-        protocols: ["http", "https"],
-      }),
-    ],
+    extensions: commentEditorExtensions,
 
     content: "",
   });
@@ -128,12 +95,10 @@ export default function CommentEditor({
     onSubmit(editor.getHTML());
 
     editor.commands.clearContent();
-    setEmojiAnchor(null);
   };
 
   const handleCancel = () => {
     editor.commands.clearContent();
-    setEmojiAnchor(null);
     onCancel?.();
   };
 
@@ -233,39 +198,12 @@ export default function CommentEditor({
         </Tooltip>
 
         {/* Emoji */}
-        <Tooltip title="Emoji">
-          <IconButton
-            size="small"
-            onClick={(event) => {
-              setEmojiAnchor(event.currentTarget);
-            }}
-            sx={{
-              color: emojiAnchor ? catppuccin.mauve : catppuccin.subtext1,
-            }}
-          >
-            <EmojiEmotionsIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
-      </Box>
-
-      {/* Emoji picker */}
-      <Popover
-        open={Boolean(emojiAnchor)}
-        anchorEl={emojiAnchor}
-        onClose={() => setEmojiAnchor(null)}
-        anchorOrigin={{
-          vertical: "bottom",
-          horizontal: "left",
-        }}
-      >
-        <EmojiPicker
-          onEmojiClick={(emojiData) => {
-            editor.chain().focus().insertContent(emojiData.emoji).run();
-
-            setEmojiAnchor(null);
-          }}
+        <EmojiPickerPopover
+          editor={editor}
+          title="Emoji"
+          icon={<EmojiEmotionsIcon fontSize="small" />}
         />
-      </Popover>
+      </Box>
 
       {/* Editor */}
       <Box

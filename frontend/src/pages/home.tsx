@@ -6,23 +6,20 @@ import {
   Grid,
   InputAdornment,
   Stack,
-  TextField,
   Typography,
 } from "@mui/material";
 import type { Post } from "../models/post";
 import { useAuth } from "../contexts/authContext";
 import { Left } from "../components/shared/left";
 import { Right } from "../components/shared/right";
+import FilledTextField from "../components/common/filledTextField";
 import { useAppTheme } from "../contexts/themeContext";
 function Home() {
-  const { user, loading } = useAuth();
+  const { loading } = useAuth();
   if (loading) {
     return <div>Loading...</div>;
   }
 
-  if (!user) {
-    return <div>Not logged in</div>;
-  }
   return (
     <Grid container spacing={1}>
       <Left />
@@ -34,6 +31,7 @@ function Home() {
 
 function Mid() {
   const { catppuccin } = useAppTheme();
+  const { user } = useAuth();
 
   const [posts] = useState<Post[]>([
     {
@@ -68,43 +66,25 @@ function Mid() {
   return (
     <Grid size={{ xs: 4, md: 8 }}>
       <Stack spacing={2}>
-        <TextField
-          placeholder="What's on your mind?"
-          variant="filled"
-          fullWidth
-          sx={{
-            "& .MuiInputBase-input": {
-              color: catppuccin.text,
-            },
-            "& .MuiInputAdornment-root": {
-              color: catppuccin.subtext1,
-            },
-            "& .MuiFilledInput-root": {
-              bgcolor: catppuccin.surface0,
-
-              "&:hover": {
-                bgcolor: catppuccin.surface1,
+        {user && (
+          <FilledTextField
+            placeholder="What's on your mind?"
+            sx={{
+              "& .MuiInputAdornment-root": {
+                color: catppuccin.subtext1,
               },
-
-              "&.Mui-focused": {
-                bgcolor: catppuccin.surface1,
+            }}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon sx={{ color: catppuccin.mauve }} />
+                  </InputAdornment>
+                ),
               },
-
-              "&:after": {
-                borderBottom: `2px solid ${catppuccin.mauve}`,
-              },
-            },
-          }}
-          slotProps={{
-            input: {
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon sx={{ color: catppuccin.mauve }} />
-                </InputAdornment>
-              ),
-            },
-          }}
-        />
+            }}
+          />
+        )}
 
         {posts.map((post) => (
           <Card

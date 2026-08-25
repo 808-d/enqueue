@@ -16,4 +16,6 @@ export const endpoints = {
   changePassword: `${API_BASE_URL}/password`,
   forgotPassword: `${API_BASE_URL}/forgot-password`,
   resetPassword: `${API_BASE_URL}/reset-password`,
+  // collab: `${API_BASE_URL.replace(/^http/, "ws")}/ws/collab`,
+  // publish: `${API_BASE_URL}/ws/publish`,
 };

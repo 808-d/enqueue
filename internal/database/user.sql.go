@@ -12,10 +12,8 @@ import (
 )
 
 const addPendingEmail = `-- name: AddPendingEmail :exec
-UPDATE users
-SET pending_email = $2,
-    update_time = now()
-WHERE id = $1 AND is_delete = false
+UPDATE users SET pending_email = $2
+where id = $1 and is_delete = false
 `
 
 type AddPendingEmailParams struct {
@@ -142,6 +140,34 @@ func (q *Queries) GetUser(ctx context.Context, id pgtype.UUID) (User, error) {
 	return i, err
 }
 
+const getUserById = `-- name: GetUserById :one
+select username, "name", email, avatar, bio,role from USERS
+where is_delete = false and id = $1
+`
+
+type GetUserByIdRow struct {
+	Username string
+	Name     pgtype.Text
+	Email    string
+	Avatar   pgtype.Text
+	Bio      pgtype.Text
+	Role     string
+}
+
+func (q *Queries) GetUserById(ctx context.Context, id pgtype.UUID) (GetUserByIdRow, error) {
+	row := q.db.QueryRow(ctx, getUserById, id)
+	var i GetUserByIdRow
+	err := row.Scan(
+		&i.Username,
+		&i.Name,
+		&i.Email,
+		&i.Avatar,
+		&i.Bio,
+		&i.Role,
+	)
+	return i, err
+}
+
 const getUserByUsername = `-- name: GetUserByUsername :one
 SELECT is_delete, create_time, update_time, id, username, email, avatar, password, role, email_verified, bio, name, pending_email FROM users
 WHERE username = $1 AND is_delete = false LIMIT 1
@@ -247,6 +273,34 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateEmail = `-- name: UpdateEmail :one
+UPDATE users SET email = pending_email,
+pending_email = null
+where id = $1 and is_delete = false
+RETURNING is_delete, create_time, update_time, id, username, email, avatar, password, role, email_verified, bio, name, pending_email
+`
+
+func (q *Queries) UpdateEmail(ctx context.Context, id pgtype.UUID) (User, error) {
+	row := q.db.QueryRow(ctx, updateEmail, id)
+	var i User
+	err := row.Scan(
+		&i.IsDelete,
+		&i.CreateTime,
+		&i.UpdateTime,
+		&i.ID,
+		&i.Username,
+		&i.Email,
+		&i.Avatar,
+		&i.Password,
+		&i.Role,
+		&i.EmailVerified,
+		&i.Bio,
+		&i.Name,
+		&i.PendingEmail,
+	)
+	return i, err
 }
 
 const updatePassword = `-- name: UpdatePassword :exec

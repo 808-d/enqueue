@@ -16,7 +16,7 @@ import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import { useAuth } from "../contexts/authContext";
 import { Right } from "../components/shared/right";
 import { Left } from "../components/shared/left";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import NotesIcon from "@mui/icons-material/Notes";
 import ShortTextIcon from "@mui/icons-material/ShortText";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
@@ -31,8 +31,9 @@ import type { Post } from "../models/post";
 import PostCard from "../components/shared/postCard";
 import { useAppTheme } from "../contexts/themeContext";
 import { Link } from "react-router-dom";
+import type { ProfileData } from "../models/proifleData";
+import { useUsers } from "../hooks/useUsers";
 export function Profile() {
-  const { user } = useAuth();
   const { catppuccin } = useAppTheme();
 
   const { createPost, getPostsByUser, updatePostStatus } = usePosts();
@@ -40,12 +41,16 @@ export function Profile() {
   const [createAnchorEl, setCreateAnchorEl] = useState<null | HTMLElement>(
     null,
   );
+  const { getUserById } = useUsers();
   const [searchParams] = useSearchParams();
   const userId = searchParams.get("id");
   const [value, setValue] = useState("1");
   const [posts, setPosts] = useState<Post[]>([]);
+  const [user, setUser] = useState<ProfileData>();
+  const [isFollowing, setIsFollowing] = useState(false);
+  const hasLoaded = useRef(false);
   const navigate = useNavigate();
-  const handleChange = (event: React.SyntheticEvent, newValue: string) => {
+  const handleChange = (newValue: string) => {
     setValue(newValue);
   };
 
@@ -68,13 +73,17 @@ export function Profile() {
   };
 
   useEffect(() => {
-    if (!userId) return;
-
+    if (!userId || hasLoaded.current) return;
+    hasLoaded.current = true;
+    const getUser = async () => {
+      const response = await getUserById(userId);
+      setUser(response.data);
+    };
     const loadPosts = async () => {
       const response = await getPostsByUser(userId);
-      setPosts(response.data);
+      setPosts(response.data || []);
     };
-
+    getUser();
     loadPosts();
   }, [userId]);
 
@@ -88,6 +97,8 @@ export function Profile() {
   if (!user) {
     return null;
   }
+
+  const isOwnProfile = !userId;
 
   return (
     <Grid container sx={{ minHeight: "100vh" }}>
@@ -108,17 +119,17 @@ export function Profile() {
               px: 3,
             }}
           >
-            {/* Avatar + Username */}
+            {/* Avatar + Name / Username */}
             <Box
               sx={{
                 display: "flex",
-                justifyContent: "space-between",
-                alignItems: "flex-end",
+                alignItems: "center",
+                gap: 3,
                 mt: 2,
               }}
             >
               <Avatar
-                src={user.avatar ?? undefined}
+                src={user.Avatar ?? undefined}
                 sx={{
                   width: 110,
                   height: 110,
@@ -127,241 +138,275 @@ export function Profile() {
                   fontSize: 42,
                   fontWeight: 700,
                   border: `4px solid ${catppuccin.base}`,
+                  flexShrink: 0,
                 }}
               >
-                {user.username.charAt(0).toUpperCase()}
+                {user.Username.charAt(0).toUpperCase()}
               </Avatar>
-            </Box>
 
-            <Box sx={{ mt: 2 }}>
-              <Typography
-                variant="h4"
-                sx={{
-                  fontWeight: 800,
-                  color: catppuccin.text,
-                  letterSpacing: "-0.02em",
-                }}
-              >
-                {user.username}
-              </Typography>
-              <Typography
-                sx={{
-                  color: catppuccin.subtext0,
-                  mt: 0.25,
-                  fontSize: "0.95rem",
-                }}
-              >
-                @{user.username}
-              </Typography>
-            </Box>
-
-            {/* User information */}
-            <Box sx={{ mt: 2 }}>
-              {user.bio && (
+              <Box sx={{ minWidth: 0 }}>
                 <Typography
+                  variant="h4"
                   sx={{
-                    mt: 2,
-                    maxWidth: 600,
-                    color: catppuccin.subtext1,
-                    lineHeight: 1.7,
-                    fontSize: "1rem",
+                    fontWeight: 800,
+                    color: catppuccin.text,
+                    letterSpacing: "-0.02em",
                   }}
                 >
-                  {user.bio}
+                  {user.Username}
                 </Typography>
-              )}
+                <Typography
+                  sx={{
+                    color: catppuccin.subtext0,
+                    mt: 0.25,
+                    fontSize: "0.95rem",
+                  }}
+                >
+                  @{user.Username}
+                </Typography>
+              </Box>
+            </Box>
 
-              <Box
+            {/* Bio */}
+            {user.Bio && (
+              <Typography
                 sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1,
                   mt: 2,
-                  color: catppuccin.subtext0,
+                  maxWidth: 600,
+                  color: catppuccin.subtext1,
+                  lineHeight: 1.7,
+                  fontSize: "1rem",
+                  textAlign: "left",
                 }}
               >
-                <CalendarMonthIcon sx={{ fontSize: 16 }} />
-                <Typography variant="body2">Joined July 2026</Typography>
-              </Box>
+                {user.Bio}
+              </Typography>
+            )}
 
-              {/* Stats */}
-              <Box
-                sx={{
-                  display: "flex",
-                  gap: 1,
-                  mt: 3,
-                }}
-              >
-                {[
-                  { label: "Posts", value: 42 },
-                  { label: "Followers", value: 128 },
-                  { label: "Following", value: 83 },
-                ].map((stat) => (
-                  <Box
-                    key={stat.label}
-                    sx={{
-                      display: "flex",
-                      alignItems: "baseline",
-                      gap: 0.75,
-                      px: 2,
-                      py: 1,
-                      borderRadius: 2,
-                      bgcolor: catppuccin.mantle,
-                      cursor: "default",
-                      "&:hover": { bgcolor: catppuccin.surface0 },
-                    }}
+            {/* Joined date */}
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                mt: 2,
+                color: catppuccin.subtext0,
+              }}
+            >
+              <CalendarMonthIcon sx={{ fontSize: 16 }} />
+              <Typography variant="body2">Joined July 2026</Typography>
+            </Box>
+
+            {/* Stats */}
+            <Box
+              sx={{
+                display: "flex",
+                gap: 1,
+                mt: 3,
+              }}
+            >
+              {[
+                { label: "Posts", value: 42 },
+                { label: "Followers", value: 128 },
+                { label: "Following", value: 83 },
+              ].map((stat) => (
+                <Box
+                  key={stat.label}
+                  sx={{
+                    display: "flex",
+                    alignItems: "baseline",
+                    gap: 0.75,
+                    px: 2,
+                    py: 1,
+                    borderRadius: 2,
+                    bgcolor: catppuccin.mantle,
+                    cursor: "default",
+                    "&:hover": { bgcolor: catppuccin.surface0 },
+                  }}
+                >
+                  <Typography sx={{ fontWeight: 700, fontSize: "1rem" }}>
+                    {stat.value}
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    sx={{ color: catppuccin.subtext0 }}
                   >
-                    <Typography sx={{ fontWeight: 700, fontSize: "1rem" }}>
-                      {stat.value}
-                    </Typography>
-                    <Typography
-                      variant="caption"
-                      sx={{ color: catppuccin.subtext0 }}
-                    >
-                      {stat.label}
-                    </Typography>
-                  </Box>
-                ))}
-              </Box>
+                    {stat.label}
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
 
-              {/* function buttons */}
-              <Box sx={{ mt: 3 }}>
-                <Grid container spacing={1}>
-                  <Grid size="grow">
-                    <Button
-                      variant="contained"
-                      endIcon={<KeyboardArrowDownIcon />}
-                      fullWidth
-                      size="large"
-                      onClick={handleCreateClick}
-                      sx={{
-                        bgcolor: catppuccin.mauve,
-                        color: catppuccin.base,
-                        textTransform: "none",
-                        fontWeight: 600,
-                        borderRadius: 2,
-                        boxShadow: "none",
-                        "&:hover": {
-                          bgcolor: catppuccin.pink,
+            {/* function buttons */}
+            <Box sx={{ mt: 3 }}>
+              <Grid container spacing={1}>
+                {isOwnProfile ? (
+                  <>
+                    <Grid size="grow">
+                      <Button
+                        variant="contained"
+                        endIcon={<KeyboardArrowDownIcon />}
+                        fullWidth
+                        size="large"
+                        onClick={handleCreateClick}
+                        sx={{
+                          bgcolor: catppuccin.mauve,
+                          color: catppuccin.base,
+                          textTransform: "none",
+                          fontWeight: 600,
+                          borderRadius: 2,
                           boxShadow: "none",
-                        },
-                      }}
-                    >
-                      Create
-                    </Button>
-
-                    <Menu
-                      anchorEl={createAnchorEl}
-                      open={createMenuOpen}
-                      onClose={handleCreateClose}
-                      slotProps={{
-                        paper: {
-                          sx: {
-                            mt: 1,
-                            bgcolor: catppuccin.mantle,
-                            color: catppuccin.text,
-                            border: `1px solid ${catppuccin.surface0}`,
-                            borderRadius: 2,
-                            minWidth: 220,
+                          "&:hover": {
+                            bgcolor: catppuccin.pink,
+                            boxShadow: "none",
                           },
-                        },
-                      }}
-                    >
-                      <MenuItem
-                        onClick={() => {
-                          handleCreateClose();
-                          // navigate("/create/post");
                         }}
-                        sx={{ py: 1.25 }}
                       >
-                        <ListItemIcon>
-                          <NotesIcon sx={{ color: catppuccin.mauve }} />
-                        </ListItemIcon>
+                        Create
+                      </Button>
 
-                        <ListItemText
-                          primary="Create Post"
-                          secondary="Write a full post"
-                          slotProps={{
-                            secondary: {
-                              sx: {
-                                color: catppuccin.subtext0,
-                              },
+                      <Menu
+                        anchorEl={createAnchorEl}
+                        open={createMenuOpen}
+                        onClose={handleCreateClose}
+                        slotProps={{
+                          paper: {
+                            sx: {
+                              mt: 1,
+                              bgcolor: catppuccin.mantle,
+                              color: catppuccin.text,
+                              border: `1px solid ${catppuccin.surface0}`,
+                              borderRadius: 2,
+                              minWidth: 220,
                             },
-                          }}
-                          onClick={handleCreate}
-                        />
-                      </MenuItem>
-
-                      <MenuItem
-                        onClick={() => {
-                          handleCreateClose();
-                          // navigate("/create/brief");
+                          },
                         }}
-                        sx={{ py: 1.25 }}
                       >
-                        <ListItemIcon>
-                          <ShortTextIcon sx={{ color: catppuccin.blue }} />
-                        </ListItemIcon>
-
-                        <ListItemText
-                          primary="Create Brief"
-                          secondary="What's on your mind?"
-                          slotProps={{
-                            secondary: {
-                              sx: {
-                                color: catppuccin.subtext0,
-                              },
-                            },
+                        <MenuItem
+                          onClick={() => {
+                            handleCreateClose();
+                            // navigate("/create/post");
                           }}
-                        />
-                      </MenuItem>
-                    </Menu>
-                  </Grid>
+                          sx={{ py: 1.25 }}
+                        >
+                          <ListItemIcon>
+                            <NotesIcon sx={{ color: catppuccin.mauve }} />
+                          </ListItemIcon>
 
-                  <Grid size="grow">
-                    <Button
-                      component={Link}
-                      to="/settings"
-                      fullWidth
-                      variant="outlined"
-                      size="large"
-                      sx={{
-                        borderColor: catppuccin.surface1,
-                        color: catppuccin.text,
-                        textTransform: "none",
-                        fontWeight: 600,
-                        borderRadius: 2,
-                        "&:hover": {
-                          borderColor: catppuccin.mauve,
-                          bgcolor: catppuccin.surface0,
-                        },
-                      }}
-                    >
-                      Edit Profile
-                    </Button>
-                  </Grid>
+                          <ListItemText
+                            primary="Create Post"
+                            secondary="Write a full post"
+                            slotProps={{
+                              secondary: {
+                                sx: {
+                                  color: catppuccin.subtext0,
+                                },
+                              },
+                            }}
+                            onClick={handleCreate}
+                          />
+                        </MenuItem>
 
-                  <Grid>
-                    <Button
-                      variant="outlined"
-                      size="large"
-                      sx={{
-                        minWidth: 48,
-                        px: 1,
-                        borderColor: catppuccin.surface1,
-                        color: catppuccin.text,
-                        borderRadius: 2,
-                        "&:hover": {
-                          borderColor: catppuccin.mauve,
-                          bgcolor: catppuccin.surface0,
-                        },
-                      }}
-                    >
-                      <MoreHorizIcon />
-                    </Button>
-                  </Grid>
-                </Grid>
-              </Box>
+                        <MenuItem
+                          onClick={() => {
+                            handleCreateClose();
+                            // navigate("/create/brief");
+                          }}
+                          sx={{ py: 1.25 }}
+                        >
+                          <ListItemIcon>
+                            <ShortTextIcon sx={{ color: catppuccin.blue }} />
+                          </ListItemIcon>
+
+                          <ListItemText
+                            primary="Create Brief"
+                            secondary="What's on your mind?"
+                            slotProps={{
+                              secondary: {
+                                sx: {
+                                  color: catppuccin.subtext0,
+                                },
+                              },
+                            }}
+                          />
+                        </MenuItem>
+                      </Menu>
+                    </Grid>
+
+                    <Grid size="grow">
+                      <Button
+                        component={Link}
+                        to="/settings"
+                        fullWidth
+                        variant="outlined"
+                        size="large"
+                        sx={{
+                          borderColor: catppuccin.surface1,
+                          color: catppuccin.text,
+                          textTransform: "none",
+                          fontWeight: 600,
+                          borderRadius: 2,
+                          "&:hover": {
+                            borderColor: catppuccin.mauve,
+                            bgcolor: catppuccin.surface0,
+                          },
+                        }}
+                      >
+                        Edit Profile
+                      </Button>
+                    </Grid>
+                  </>
+                ) : (
+                  <>
+                    <Grid size="grow">
+                      <Button
+                        variant="contained"
+                        fullWidth
+                        size="large"
+                        onClick={() => setIsFollowing((prev) => !prev)}
+                        sx={{
+                          bgcolor: isFollowing
+                            ? catppuccin.surface1
+                            : catppuccin.mauve,
+                          color: catppuccin.base,
+                          textTransform: "none",
+                          fontWeight: 600,
+                          borderRadius: 2,
+                          boxShadow: "none",
+                          "&:hover": {
+                            bgcolor: isFollowing
+                              ? catppuccin.surface2
+                              : catppuccin.pink,
+                            boxShadow: "none",
+                          },
+                        }}
+                      >
+                        {isFollowing ? "Following" : "Follow"}
+                      </Button>
+                    </Grid>
+
+                    <Grid>
+                      <Button
+                        variant="outlined"
+                        size="large"
+                        sx={{
+                          minWidth: 48,
+                          px: 1,
+                          borderColor: catppuccin.surface1,
+                          color: catppuccin.text,
+                          borderRadius: 2,
+                          "&:hover": {
+                            borderColor: catppuccin.mauve,
+                            bgcolor: catppuccin.surface0,
+                          },
+                        }}
+                      >
+                        <MoreHorizIcon />
+                      </Button>
+                    </Grid>
+                  </>
+                )}
+              </Grid>
             </Box>
 
             <Divider

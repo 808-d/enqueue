@@ -6,6 +6,7 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ErrorIcon from "@mui/icons-material/Error";
 import { endpoints } from "../utils/endpoints";
 import { useAppTheme } from "../contexts/themeContext";
+import CenteredScreen from "../components/common/centeredScreen";
 
 function Verify() {
   const [searchParams] = useSearchParams();
@@ -49,15 +50,7 @@ function Verify() {
   }, [searchParams, navigate]);
 
   return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        bgcolor: catppuccin.base,
-      }}
-    >
+    <CenteredScreen>
       <Box
         sx={{
           width: "100%",
@@ -156,7 +149,7 @@ function Verify() {
           </>
         )}
       </Box>
-    </Box>
+    </CenteredScreen>
   );
 }
 

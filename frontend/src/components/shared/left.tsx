@@ -61,17 +61,27 @@ export function Left() {
         </Box>
       </Button>
 
-      <Button startIcon={<TurnedInIcon />} sx={navButtonSx("/subscriptions")}>
-        <Box component="span" sx={labelSx}>
-          Subscriptions
-        </Box>
-      </Button>
+      {user && (
+        <>
+          <Button
+            startIcon={<TurnedInIcon />}
+            sx={navButtonSx("/subscriptions")}
+          >
+            <Box component="span" sx={labelSx}>
+              Subscriptions
+            </Box>
+          </Button>
 
-      <Button startIcon={<NotificationsIcon />} sx={navButtonSx("/activity")}>
-        <Box component="span" sx={labelSx}>
-          Activity
-        </Box>
-      </Button>
+          <Button
+            startIcon={<NotificationsIcon />}
+            sx={navButtonSx("/activity")}
+          >
+            <Box component="span" sx={labelSx}>
+              Activity
+            </Box>
+          </Button>
+        </>
+      )}
 
       <Button startIcon={<SearchIcon />} sx={navButtonSx("/explore")}>
         <Box component="span" sx={labelSx}>
@@ -79,16 +89,18 @@ export function Left() {
         </Box>
       </Button>
 
-      <Button
-        startIcon={<SettingsIcon />}
-        component={Link}
-        to="/settings"
-        sx={navButtonSx("/settings")}
-      >
-        <Box component="span" sx={labelSx}>
-          Settings
-        </Box>
-      </Button>
+      {user && (
+        <Button
+          startIcon={<SettingsIcon />}
+          component={Link}
+          to="/settings"
+          sx={navButtonSx("/settings")}
+        >
+          <Box component="span" sx={labelSx}>
+            Settings
+          </Box>
+        </Button>
+      )}
 
       {user ? (
         <Button

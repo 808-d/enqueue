@@ -61,10 +61,8 @@ SELECT id FROM users
 WHERE username = $1 AND is_delete = false LIMIT 1;
 
 -- name: AddPendingEmail :exec
-UPDATE users
-SET pending_email = $2,
-    update_time = now()
-WHERE id = $1 AND is_delete = false;
+UPDATE users SET pending_email = $2
+where id = $1 and is_delete = false;
 
 -- name: ConfirmEmailChange :one
 UPDATE users SET email = pending_email,
@@ -83,3 +81,13 @@ where id = $1 and is_delete = false;
 -- name: GetUserByUsername :one
 SELECT * FROM users
 WHERE username = $1 AND is_delete = false LIMIT 1;
+
+-- name: UpdateEmail :one
+UPDATE users SET email = pending_email,
+pending_email = null
+where id = $1 and is_delete = false
+RETURNING *;
+
+-- name: GetUserById :one
+select username, "name", email, avatar, bio,role from USERS
+where is_delete = false and id = $1;

@@ -1,44 +1,13 @@
-import {
-  Alert,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Container,
-  FormControl,
-  Link,
-  Snackbar,
-  Stack,
-  TextField,
-  Typography,
-} from "@mui/material";
-import { useRef, useState } from "react";
+import { Alert, Box, Button, Link, Snackbar, Stack, Typography } from "@mui/material";
+import { useState } from "react";
 import axios from "axios";
 import { endpoints } from "../utils/endpoints";
+import AuthShell from "../components/common/authShell";
+import FilledTextField from "../components/common/filledTextField";
 import { useAppTheme } from "../contexts/themeContext";
 
 export default function Signup() {
   const { catppuccin } = useAppTheme();
-  const textFieldStyle = {
-    "& .MuiInputBase-input": {
-      color: catppuccin.text,
-    },
-    "& .MuiFilledInput-root": {
-      bgcolor: catppuccin.surface0,
-
-      "&:hover": {
-        bgcolor: catppuccin.surface1,
-      },
-
-      "&.Mui-focused": {
-        bgcolor: catppuccin.surface1,
-      },
-
-      "&:after": {
-        borderBottom: `2px solid ${catppuccin.mauve}`,
-      },
-    },
-  };
   const [signUpState, setSignUpState] = useState({
     username: "",
     name: "",
@@ -90,213 +59,138 @@ export default function Signup() {
   };
 
   return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        bgcolor: catppuccin.base,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <Container maxWidth="xs">
-        <Card
+    <AuthShell>
+      <Box
+        sx={{
+          textAlign: "center",
+        }}
+      >
+        <Typography
+          variant="h4"
           sx={{
-            bgcolor: catppuccin.mantle,
-            border: `1px solid ${catppuccin.surface1}`,
-            borderRadius: 3,
-            boxShadow: "none",
+            fontWeight: 700,
+            color: catppuccin.text,
           }}
         >
-          <CardContent sx={{ p: 4 }}>
-            <Stack spacing={3}>
-              <Box
-                sx={{
-                  textAlign: "center",
-                }}
-              >
-                <Typography
-                  variant="h4"
-                  sx={{
-                    fontWeight: 700,
-                    color: catppuccin.text,
-                  }}
-                >
-                  enqueue
-                </Typography>
+          enqueue
+        </Typography>
 
-                <Typography
-                  variant="body2"
-                  sx={{
-                    mt: 1,
-                    color: catppuccin.subtext1,
-                  }}
-                >
-                  Create your account.
-                </Typography>
-              </Box>
-              <Box component="form" onSubmit={signUp}>
-                <Stack spacing={2}>
-                  <TextField
-                    label="Name"
-                    variant="filled"
-                    fullWidth
-                    slotProps={{
-                      inputLabel: {
-                        sx: {
-                          color: catppuccin.subtext1,
-                        },
-                      },
-                    }}
-                    required
-                    sx={textFieldStyle}
-                    value={signUpState.username}
-                    onChange={(e) =>
-                      setSignUpState({
-                        ...signUpState,
-                        name: e.target.value,
-                      })
-                    }
-                  />
-                  <TextField
-                    label="Username"
-                    variant="filled"
-                    fullWidth
-                    slotProps={{
-                      inputLabel: {
-                        sx: {
-                          color: catppuccin.subtext1,
-                        },
-                      },
-                    }}
-                    required
-                    sx={textFieldStyle}
-                    value={signUpState.username}
-                    onChange={(e) =>
-                      setSignUpState({
-                        ...signUpState,
-                        username: e.target.value,
-                      })
-                    }
-                  />
+        <Typography
+          variant="body2"
+          sx={{
+            mt: 1,
+            color: catppuccin.subtext1,
+          }}
+        >
+          Create your account.
+        </Typography>
+      </Box>
+      <Box component="form" onSubmit={signUp}>
+        <Stack spacing={2}>
+          <FilledTextField
+            label="Name"
+            required
+            value={signUpState.username}
+            onChange={(e) =>
+              setSignUpState({
+                ...signUpState,
+                name: e.target.value,
+              })
+            }
+          />
+          <FilledTextField
+            label="Username"
+            required
+            value={signUpState.username}
+            onChange={(e) =>
+              setSignUpState({
+                ...signUpState,
+                username: e.target.value,
+              })
+            }
+          />
 
-                  <TextField
-                    label="Email"
-                    type="email"
-                    variant="filled"
-                    fullWidth
-                    slotProps={{
-                      inputLabel: {
-                        sx: {
-                          color: catppuccin.subtext1,
-                        },
-                      },
-                    }}
-                    required
-                    sx={textFieldStyle}
-                    value={signUpState.email}
-                    onChange={(e) =>
-                      setSignUpState({ ...signUpState, email: e.target.value })
-                    }
-                  />
+          <FilledTextField
+            label="Email"
+            type="email"
+            required
+            value={signUpState.email}
+            onChange={(e) =>
+              setSignUpState({ ...signUpState, email: e.target.value })
+            }
+          />
 
-                  <TextField
-                    label="Password"
-                    type="password"
-                    variant="filled"
-                    fullWidth
-                    slotProps={{
-                      inputLabel: {
-                        sx: {
-                          color: catppuccin.subtext1,
-                        },
-                      },
-                    }}
-                    required
-                    sx={textFieldStyle}
-                    value={signUpState.password}
-                    onChange={(e) =>
-                      setSignUpState({
-                        ...signUpState,
-                        password: e.target.value,
-                      })
-                    }
-                  />
+          <FilledTextField
+            label="Password"
+            type="password"
+            required
+            value={signUpState.password}
+            onChange={(e) =>
+              setSignUpState({
+                ...signUpState,
+                password: e.target.value,
+              })
+            }
+          />
 
-                  <TextField
-                    label="Confirm Password"
-                    type="password"
-                    variant="filled"
-                    fullWidth
-                    slotProps={{
-                      inputLabel: {
-                        sx: {
-                          color: catppuccin.subtext1,
-                        },
-                      },
-                    }}
-                    required
-                    sx={textFieldStyle}
-                    value={signUpState.confirmPassword}
-                    onChange={(e) =>
-                      setSignUpState({
-                        ...signUpState,
-                        confirmPassword: e.target.value,
-                      })
-                    }
-                  />
-                  {signUpState.confirmPassword.length > 0 &&
-                    signUpState.password !== signUpState.confirmPassword && (
-                      <Typography
-                        variant="body2"
-                        sx={{ color: catppuccin.red }}
-                      >
-                        Passwords do not match!
-                      </Typography>
-                    )}
-                  <Button
-                    variant="contained"
-                    fullWidth
-                    sx={{
-                      bgcolor: catppuccin.mauve,
-                      color: catppuccin.base,
-                      py: 1.25,
-                      fontWeight: 700,
-
-                      "&:hover": {
-                        bgcolor: catppuccin.pink,
-                      },
-                    }}
-                    type="submit"
-                    disabled={submitting}
-                  >
-                    {submitting ? "Creating..." : "Create Account"}
-                  </Button>
-                </Stack>
-              </Box>
-              <Typography
-                variant="body2"
-                sx={{
-                  textAlign: "center",
-                  color: catppuccin.subtext1,
-                }}
-              >
-                Already have an account?{" "}
-                <Link
-                  href="/login"
-                  underline="hover"
-                  sx={{
-                    color: catppuccin.mauve,
-                    fontWeight: 600,
-                  }}
-                >
-                  Sign in
-                </Link>
+          <FilledTextField
+            label="Confirm Password"
+            type="password"
+            required
+            value={signUpState.confirmPassword}
+            onChange={(e) =>
+              setSignUpState({
+                ...signUpState,
+                confirmPassword: e.target.value,
+              })
+            }
+          />
+          {signUpState.confirmPassword.length > 0 &&
+            signUpState.password !== signUpState.confirmPassword && (
+              <Typography variant="body2" sx={{ color: catppuccin.red }}>
+                Passwords do not match!
               </Typography>
-            </Stack>
-          </CardContent>
-        </Card>
-      </Container>
+            )}
+          <Button
+            variant="contained"
+            fullWidth
+            sx={{
+              bgcolor: catppuccin.mauve,
+              color: catppuccin.base,
+              py: 1.25,
+              fontWeight: 700,
+
+              "&:hover": {
+                bgcolor: catppuccin.pink,
+              },
+            }}
+            type="submit"
+            disabled={submitting}
+          >
+            {submitting ? "Creating..." : "Create Account"}
+          </Button>
+        </Stack>
+      </Box>
+      <Typography
+        variant="body2"
+        sx={{
+          textAlign: "center",
+          color: catppuccin.subtext1,
+        }}
+      >
+        Already have an account?{" "}
+        <Link
+          href="/login"
+          underline="hover"
+          sx={{
+            color: catppuccin.mauve,
+            fontWeight: 600,
+          }}
+        >
+          Sign in
+        </Link>
+      </Typography>
+
       <Snackbar
         open={toast.open}
         autoHideDuration={6000}
@@ -312,6 +206,6 @@ export default function Signup() {
           {toast.message}
         </Alert>
       </Snackbar>
-    </Box>
+    </AuthShell>
   );
 }

@@ -1,18 +1,11 @@
-import {
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Container,
-  Link,
-  Stack,
-  TextField,
-  Typography,
-} from "@mui/material";
+import { Box, Button, Link, Typography } from "@mui/material";
 import { useState } from "react";
 import axios from "axios";
 import { endpoints } from "../utils/endpoints";
+import AuthShell from "../components/common/authShell";
+import FilledTextField from "../components/common/filledTextField";
 import { useAppTheme } from "../contexts/themeContext";
+
 export default function Login() {
   const { catppuccin } = useAppTheme();
 
@@ -44,175 +37,98 @@ export default function Login() {
       { withCredentials: true },
     );
   };
+
   return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        bgcolor: catppuccin.base,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <Container maxWidth="xs">
-        <Card
+    <AuthShell>
+      <Box
+        sx={{
+          textAlign: "center",
+          mt: 2,
+        }}
+      >
+        <Typography
+          variant="h4"
           sx={{
-            bgcolor: catppuccin.mantle,
-            border: `1px solid ${catppuccin.surface1}`,
-            borderRadius: 3,
-            boxShadow: "none",
+            color: catppuccin.subtext1,
+            mt: 1,
           }}
         >
-          <CardContent sx={{ p: 4 }}>
-            <Stack spacing={3}>
-              <Box
-                sx={{
-                  textAlign: "center",
-                  mt: 2,
-                }}
-              >
-                <Typography
-                  variant="h4"
-                  sx={{
-                    color: catppuccin.subtext1,
-                    mt: 1,
-                  }}
-                >
-                  Welcome back.
-                </Typography>
-              </Box>
+          Welcome back.
+        </Typography>
+      </Box>
 
-              <TextField
-                label="Username"
-                variant="filled"
-                fullWidth
-                slotProps={{
-                  inputLabel: {
-                    sx: {
-                      color: catppuccin.subtext1,
-                    },
-                  },
-                }}
-                sx={{
-                  "& .MuiFilledInput-root": {
-                    bgcolor: catppuccin.surface0,
-                    color: catppuccin.text,
+      <FilledTextField
+        label="Username"
+        onChange={(e) =>
+          setLoginState((prev) => ({
+            ...prev,
+            username: e.target.value,
+          }))
+        }
+      />
 
-                    "&:hover": {
-                      bgcolor: catppuccin.surface1,
-                    },
+      <FilledTextField
+        label="Password"
+        type="password"
+        onChange={(e) =>
+          setLoginState((prev) => ({
+            ...prev,
+            password: e.target.value,
+          }))
+        }
+      />
 
-                    "&.Mui-focused": {
-                      bgcolor: catppuccin.surface1,
-                    },
+      <Button
+        variant="contained"
+        fullWidth
+        sx={{
+          bgcolor: catppuccin.mauve,
+          color: catppuccin.base,
+          py: 1.25,
+          fontWeight: 700,
 
-                    "&:after": {
-                      borderBottom: `2px solid ${catppuccin.mauve}`,
-                    },
-                  },
-                }}
-                onChange={(e) =>
-                  setLoginState((prev) => ({
-                    ...prev,
-                    username: e.target.value,
-                  }))
-                }
-              />
+          "&:hover": {
+            bgcolor: catppuccin.pink,
+          },
+        }}
+        onClick={login}
+      >
+        Sign In
+      </Button>
 
-              <TextField
-                label="Password"
-                type="password"
-                variant="filled"
-                fullWidth
-                slotProps={{
-                  inputLabel: {
-                    sx: {
-                      color: catppuccin.subtext1,
-                    },
-                  },
-                }}
-                sx={{
-                  "& .MuiFilledInput-root": {
-                    bgcolor: catppuccin.surface0,
-                    color: catppuccin.text,
+      <Box sx={{ textAlign: "center", mt: -1 }}>
+        <Typography
+          onClick={handleForgotPassword}
+          sx={{
+            color: catppuccin.mauve,
+            fontWeight: 600,
+            cursor: "pointer",
+            "&:hover": { textDecoration: "underline" },
+          }}
+        >
+          Forgot password ?
+        </Typography>
+      </Box>
 
-                    "&:hover": {
-                      bgcolor: catppuccin.surface1,
-                    },
-
-                    "&.Mui-focused": {
-                      bgcolor: catppuccin.surface1,
-                    },
-
-                    "&:after": {
-                      borderBottom: `2px solid ${catppuccin.mauve}`,
-                    },
-                  },
-                }}
-                onChange={(e) =>
-                  setLoginState((prev) => ({
-                    ...prev,
-                    password: e.target.value,
-                  }))
-                }
-              />
-
-              <Button
-                variant="contained"
-                fullWidth
-                sx={{
-                  bgcolor: catppuccin.mauve,
-                  color: catppuccin.base,
-                  py: 1.25,
-                  fontWeight: 700,
-
-                  "&:hover": {
-                    bgcolor: catppuccin.pink,
-                  },
-                }}
-                onClick={login}
-              >
-                Sign In
-              </Button>
-
-              <Box sx={{ textAlign: "center", mt: -1 }}>
-                <Typography
-                  onClick={handleForgotPassword}
-                  sx={{
-                    color: catppuccin.mauve,
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    "&:hover": { textDecoration: "underline" },
-                  }}
-                >
-                  Forgot password?
-                </Typography>
-              </Box>
-
-              <Typography
-                variant="body2"
-                align="center"
-                sx={{
-                  color: catppuccin.subtext1,
-                }}
-              >
-                Don't have an account?{" "}
-                <Link
-                  href="/signup"
-                  underline="hover"
-                  sx={{
-                    color: catppuccin.mauve,
-                    fontWeight: 600,
-                  }}
-                >
-                  Sign up
-                </Link>
-              </Typography>
-            </Stack>
-          </CardContent>
-        </Card>
-        error
-      </Container>
-    </Box>
+      <Typography
+        variant="body2"
+        align="center"
+        sx={{
+          color: catppuccin.subtext1,
+        }}
+      >
+        Don't have an account?{" "}
+        <Link
+          href="/signup"
+          underline="hover"
+          sx={{
+            color: catppuccin.mauve,
+            fontWeight: 600,
+          }}
+        >
+          Sign up
+        </Link>
+      </Typography>
+    </AuthShell>
   );
 }

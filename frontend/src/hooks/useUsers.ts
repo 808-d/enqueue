@@ -4,18 +4,16 @@ import type { UpdateUserRequest } from "../models/updateUserRequest";
 import type { UpdateUserResponse } from "../models/updateUserResponse";
 
 export function useUsers() {
-  const updateUser = async (
-    req: UpdateUserRequest,
-  ): Promise<UpdateUserResponse> => {
-    const response = await axios.patch<UpdateUserResponse>(
-      endpoints.users,
-      req,
-      {
-        withCredentials: true,
-      },
-    );
-    return response.data;
-  };
+  async function updateUser(req: UpdateUserRequest) {
+    return await axios.patch<UpdateUserResponse>(endpoints.users, req, {
+      withCredentials: true,
+    });
+  }
 
-  return { updateUser };
+  async function getUserById(id: string) {
+    return await axios.get(`${endpoints.users}/${id}`, {
+      withCredentials: true,
+    });
+  }
+  return { updateUser, getUserById };
 }

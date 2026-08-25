@@ -149,3 +149,21 @@ func (h *UsersHandler) Me(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(userResp)
 }
+func (h *UsersHandler) GetUserById(w http.ResponseWriter, r *http.Request) {
+	userID, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "invalid user id", http.StatusBadRequest)
+		return
+	}
+
+	user, err := h.userService.GetUserByID(r.Context(), userID)
+	if err != nil {
+		http.Error(w, "not found user", http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(user)
+
+}

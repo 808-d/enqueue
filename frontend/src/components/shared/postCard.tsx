@@ -9,7 +9,6 @@ import {
   Typography,
 } from "@mui/material";
 
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutlined";
 import RepeatIcon from "@mui/icons-material/Repeat";
@@ -17,17 +16,12 @@ import RepeatIcon from "@mui/icons-material/Repeat";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useEditor } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import Underline from "@tiptap/extension-underline";
-import Image from "@tiptap/extension-image";
-import Emoji, { gitHubEmojis } from "@tiptap/extension-emoji";
-import Link from "@tiptap/extension-link";
 
 import CommentEditor from "./commentEditor";
 import { useComments } from "../../hooks/useComments";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
-import EditIcon from "@mui/icons-material/Edit";
-import { Menu, MenuItem } from "@mui/material";
+import EditDeleteMenu from "../common/editDeleteMenu";
+import { commentEditorExtensions } from "../common/commentEditorExtensions";
 import { useAppTheme } from "../../contexts/themeContext";
 type PostCardProps = {
   id: string;
@@ -115,25 +109,7 @@ export default function PostCard({
     p: 3,
   };
   const editor = useEditor({
-    extensions: [
-      StarterKit,
-
-      Underline,
-
-      Image,
-
-      Emoji.configure({
-        emojis: gitHubEmojis,
-        enableEmoticons: true,
-      }),
-
-      Link.configure({
-        openOnClick: false,
-        autolink: true,
-        defaultProtocol: "https",
-        protocols: ["http", "https"],
-      }),
-    ],
+    extensions: commentEditorExtensions,
 
     content: "",
   });
@@ -254,35 +230,20 @@ export default function PostCard({
                   <MoreVertIcon fontSize="small" />
                 </IconButton>
 
-                <Menu
+                <EditDeleteMenu
                   anchorEl={menuAnchor}
                   open={menuOpen}
                   onClose={handleMenuClose}
                   onClick={(event) => event.stopPropagation()}
-                >
-                  <MenuItem
-                    onClick={() => {
-                      setMenuAnchor(null);
-                      navigate(`/compose?id=${id}`);
-                    }}
-                  >
-                    <EditIcon fontSize="small" sx={{ mr: 1 }} />
-                    Edit
-                  </MenuItem>
-
-                  <MenuItem
-                    onClick={() => {
-                      setMenuAnchor(null);
-                      onDelete(id);
-                    }}
-                    sx={{
-                      color: "#f38ba8",
-                    }}
-                  >
-                    <DeleteOutlineIcon fontSize="small" sx={{ mr: 1 }} />
-                    Delete
-                  </MenuItem>
-                </Menu>
+                  onEdit={() => {
+                    setMenuAnchor(null);
+                    navigate(`/compose?id=${id}`);
+                  }}
+                  onDelete={() => {
+                    setMenuAnchor(null);
+                    onDelete(id);
+                  }}
+                />
 
                 {statusInfo && (
                   <Chip

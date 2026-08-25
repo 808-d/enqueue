@@ -1,4 +1,3 @@
-// pages/VerifyEmailChange.tsx
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { Box, Typography, CircularProgress, Button } from "@mui/material";
@@ -8,6 +7,7 @@ import axios from "axios";
 import { endpoints } from "../utils/endpoints";
 import { useAuth } from "../contexts/authContext";
 import { useAppTheme } from "../contexts/themeContext";
+import CenteredScreen from "../components/common/centeredScreen";
 
 type Status = "loading" | "success" | "error";
 
@@ -40,16 +40,7 @@ export default function VerifyEmailChange() {
   }, [token]);
 
   return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        bgcolor: catppuccin.base,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        px: 2,
-      }}
-    >
+    <CenteredScreen sx={{ px: 2 }}>
       <Box sx={{ maxWidth: 420, textAlign: "center" }}>
         {status === "loading" && (
           <>
@@ -114,6 +105,6 @@ export default function VerifyEmailChange() {
           </>
         )}
       </Box>
-    </Box>
+    </CenteredScreen>
   );
 }

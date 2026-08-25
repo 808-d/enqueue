@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   Alert,
@@ -8,7 +8,6 @@ import {
   IconButton,
   Menu,
   MenuItem,
-  Popover,
   Select,
   Snackbar,
   Tooltip,
@@ -16,10 +15,10 @@ import {
 
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import Collaboration from "@tiptap/extension-collaboration";
-import * as Y from "yjs";
-import { WebsocketProvider } from "y-websocket";
-
+// import { Editor } from "@tiptap/react"; // saved for later (collaboration)
+// import Collaboration from "@tiptap/extension-collaboration"; // saved for later (collaboration)
+// import * as Y from "yjs"; // saved for later (collaboration)
+// import { WebsocketProvider } from "y-websocket"; // saved for later (collaboration)
 import Underline from "@tiptap/extension-underline";
 import TextAlign from "@tiptap/extension-text-align";
 import { TextStyle } from "@tiptap/extension-text-style";
@@ -42,20 +41,22 @@ import HorizontalRuleIcon from "@mui/icons-material/HorizontalRule";
 import UndoIcon from "@mui/icons-material/Undo";
 import RedoIcon from "@mui/icons-material/Redo";
 import ImageIcon from "@mui/icons-material/Image";
-import EmojiPicker from "emoji-picker-react";
 import ImageResize from "tiptap-extension-resize-image";
 import Emoji, { gitHubEmojis } from "@tiptap/extension-emoji";
+// import axios from "axios"; // saved for later (collaboration)
 import TableChartSharpIcon from "@mui/icons-material/TableChartSharp";
 import { TableKit } from "@tiptap/extension-table";
 import Link from "@tiptap/extension-link";
 import { useCloudinary } from "../hooks/useCloudinary";
 import { usePosts } from "../hooks/usePosts";
-import { useSearchParams } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import enqueueLogo from "../assets/enqueue.svg";
 import type { Post } from "../models/post";
 import { LinkWidget } from "../components/shared/linkWidget";
+import EmojiPickerPopover from "../components/common/emojiPickerPopover";
 import { useAppTheme } from "../contexts/themeContext";
+// import { endpoints } from "../utils/endpoints"; // saved for later (collaboration)
+
 const colors = [
   "#cba6f7",
   "#f38ba8",
@@ -83,171 +84,13 @@ const Compose = () => {
   const { catppuccin } = useAppTheme();
 
   const [colorAnchor, setColorAnchor] = useState<null | HTMLElement>(null);
-
   const [highlightAnchor, setHighlightAnchor] = useState<null | HTMLElement>(
     null,
   );
-  const [emojiAnchor, setEmojiAnchor] = useState<HTMLElement | null>(null);
   const [searchParams] = useSearchParams();
-
   const postId = searchParams.get("id");
-  const [post, setPost] = useState<Post | null>(null);
-
-  // Collaboration setup
-  const ydoc = new Y.Doc();
-  const provider = new WebsocketProvider(
-    "ws://localhost:1234",
-    `post-${postId || "new"}`,
-    ydoc,
-  );
-  const ytext = ydoc.getText("content");
-
-  useEffect(() => {
-    if (!postId) return;
-
-    const fetchPost = async () => {
-      try {
-        const response = await getPostById(postId);
-
-        if (response?.post) {
-          setPost(response.post);
-          setTitle(response.post.Title ?? "No title");
-        }
-      } catch (err) {
-        console.error("Failed to get post:", err);
-      }
-    };
-
-    fetchPost();
-  }, [postId]);
-
-  // Cleanup provider on unmount
-  useEffect(() => {
-    return () => {
-      provider.destroy();
-      ydoc.destroy();
-    };
-  }, []);
-
-  const editor = useEditor({
-    extensions: [
-      StarterKit.configure({
-        heading: {
-          levels: [1, 2, 3, 4, 5, 6],
-        },
-      }),
-
-      Collaboration.configure({
-        document: ydoc,
-      }),
-
-      Underline,
-
-      TextAlign.configure({
-        types: ["heading", "paragraph"],
-      }),
-
-      TextStyle,
-
-      Color,
-
-      Highlight.configure({
-        multicolor: true,
-      }),
-      ImageResize.configure({
-        minWidth: 50,
-        maxWidth: 990,
-        inline: true,
-      }),
-      Emoji.configure({
-        emojis: gitHubEmojis,
-        enableEmoticons: true,
-      }),
-      TableKit.configure({
-        table: { resizable: true },
-      }),
-      Link.configure({
-        openOnClick: false,
-        autolink: true,
-        markdownLinks: true,
-        defaultProtocol: "https",
-        protocols: ["http", "https"],
-        isAllowedUri: (url, ctx) => {
-          try {
-            // construct URL
-            const parsedUrl = url.includes(":")
-              ? new URL(url)
-              : new URL(`${ctx.defaultProtocol}://${url}`);
-
-            // use default validation
-            if (!ctx.defaultValidate(parsedUrl.href)) {
-              return false;
-            }
-
-            // disallowed protocols
-            const disallowedProtocols = ["ftp", "file", "mailto"];
-            const protocol = parsedUrl.protocol.replace(":", "");
-
-            if (disallowedProtocols.includes(protocol)) {
-              return false;
-            }
-
-            // only allow protocols specified in ctx.protocols
-            const allowedProtocols = ctx.protocols.map((p) =>
-              typeof p === "string" ? p : p.scheme,
-            );
-
-            if (!allowedProtocols.includes(protocol)) {
-              return false;
-            }
-
-            // disallowed domains
-            const disallowedDomains = [
-              "example-phishing.com",
-              "malicious-site.net",
-            ];
-            const domain = parsedUrl.hostname;
-
-            if (disallowedDomains.includes(domain)) {
-              return false;
-            }
-
-            // all checks have passed
-            return true;
-          } catch {
-            return false;
-          }
-        },
-        shouldAutoLink: (url) => {
-          try {
-            // construct URL
-            const parsedUrl = url.includes(":")
-              ? new URL(url)
-              : new URL(`https://${url}`);
-
-            // only auto-link if the domain is not in the disallowed list
-            const disallowedDomains = [
-              "example-no-autolink.com",
-              "another-no-autolink.com",
-            ];
-            const domain = parsedUrl.hostname;
-
-            return !disallowedDomains.includes(domain);
-          } catch {
-            return false;
-          }
-        },
-      }),
-    ],
-    // content: post ? `<p>${post.Content}</p>` : "",
-  });
-  useEffect(() => {
-    if (!editor || !post) return;
-
-    editor.commands.setContent(post.Content);
-    ytext.delete(0, ytext.length);
-    ytext.insert(0, post.Content ?? "");
-  }, [editor, post]);
+  const [_post, setPost] = useState<Post | null>(null);
+  const [title, setTitle] = useState("No title");
   const { uploadImage } = useCloudinary();
   const { updatePost, getPostById } = usePosts();
   const navigate = useNavigate();
@@ -257,9 +100,150 @@ const Compose = () => {
     severity: "success" as "success" | "error",
   });
 
+  // ---- Collaboration: doc + provider, created once per room, stable across re-renders ----
+  // const roomId = postId ?? "new";
+
+  // const [ydoc, setYdoc] = useState<Y.Doc | null>(null);
+
+  // const hasConnected = useRef(false); // saved for later (collaboration)
+
+  // useEffect(() => {
+  //   if (hasConnected.current) return;
+  //   hasConnected.current = true;
+
+  //   const doc = new Y.Doc();
+  //   const wsProvider = new WebsocketProvider(endpoints.collab, roomId, doc);
+
+  //   wsProvider.on("status", (event) => {
+  //     console.log(event.status);
+  //   });
+
+  //   setYdoc(doc);
+
+  //   return () => {
+  //     wsProvider.destroy();
+  //     doc.destroy();
+  //     setYdoc(null);
+  //     hasConnected.current = false;
+  //   };
+  // }, [roomId]);
+
+  // const publishDocument = async (editor: Editor) => {
+  //   const content = editor.getJSON();
+  //
+  //   await axios.post(`${endpoints.publish}/${roomId}`, {
+  //     content,
+  //   });
+  // };
+  const editor = useEditor(
+    {
+      extensions: [
+        StarterKit.configure({
+          heading: { levels: [1, 2, 3, 4, 5, 6] },
+          // undoRedo: false, // saved for later (collaboration) — Collaboration provides its own history
+        }),
+        // ...(ydoc ? [Collaboration.configure({ document: ydoc })] : []),
+        Underline,
+        TextAlign.configure({ types: ["heading", "paragraph"] }),
+        TextStyle,
+        Color,
+        Highlight.configure({ multicolor: true }),
+        ImageResize.configure({
+          minWidth: 50,
+          maxWidth: 990,
+          inline: true,
+        }),
+        Emoji.configure({
+          emojis: gitHubEmojis,
+          enableEmoticons: true,
+        }),
+        TableKit.configure({
+          table: { resizable: true },
+        }),
+        Link.configure({
+          openOnClick: false,
+          autolink: true,
+          markdownLinks: true,
+          defaultProtocol: "https",
+          protocols: ["http", "https"],
+          isAllowedUri: (url, ctx) => {
+            try {
+              const parsedUrl = url.includes(":")
+                ? new URL(url)
+                : new URL(`${ctx.defaultProtocol}://${url}`);
+
+              if (!ctx.defaultValidate(parsedUrl.href)) {
+                return false;
+              }
+
+              const disallowedProtocols = ["ftp", "file", "mailto"];
+              const protocol = parsedUrl.protocol.replace(":", "");
+
+              if (disallowedProtocols.includes(protocol)) {
+                return false;
+              }
+
+              const allowedProtocols = ctx.protocols.map((p) =>
+                typeof p === "string" ? p : p.scheme,
+              );
+
+              if (!allowedProtocols.includes(protocol)) {
+                return false;
+              }
+
+              return true;
+            } catch {
+              return false;
+            }
+          },
+        }),
+      ],
+      // onUpdate: ({ editor }) => {
+      //   publishDocument(editor);
+      // },
+    },
+    // [ydoc], // saved for later (collaboration) — recreate editor when doc changes
+    [],
+  );
+
+  // fetch existing post, if editing
+  const hasFetchedPost = useRef(false);
+
+  useEffect(() => {
+    if (!postId) return;
+    if (hasFetchedPost.current) return;
+    hasFetchedPost.current = true;
+
+    let cancelled = false;
+
+    const fetchPost = async () => {
+      try {
+        const response = await getPostById(postId);
+
+        if (cancelled) return;
+
+        if (response?.post) {
+          setPost(response.post);
+          setTitle(response.post.Title ?? "No title");
+        }
+      } catch (err) {
+        if (cancelled) return;
+
+        console.error("Failed to get post:", err);
+      }
+    };
+
+    fetchPost();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [postId, getPostById]);
+
   if (!editor) {
     return null;
   }
+
   const toggleColorMenu = (event: React.MouseEvent<HTMLButtonElement>) => {
     setColorAnchor(event.currentTarget);
   };
@@ -270,29 +254,18 @@ const Compose = () => {
 
   const handleImage = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-
     if (!file) return;
 
     const result = await uploadImage(file, "enqueue/posts");
-
     if (!result) return;
 
-    editor
-      .chain()
-      .focus()
-      .setImage({
-        src: result.url,
-      })
-      .run();
-
+    editor.chain().focus().setImage({ src: result.url }).run();
     event.target.value = "";
   };
 
   const insertTable = () => {
     editor.commands.insertTable({ rows: 3, cols: 3, withHeaderRow: true });
   };
-
-  const [title, setTitle] = useState("No title");
 
   const handleUpdatePost = async (id: string, status: number) => {
     if (!editor) return;
@@ -303,20 +276,15 @@ const Compose = () => {
 
       await updatePost(id, nextTitle, content, status);
 
-      if (status === 1) {
-        setSnackbar({
-          open: true,
-          message: "Draft saved successfully",
-          severity: "success",
-        });
-      } else if (status === 2) {
-        setSnackbar({
-          open: true,
-          message: "Post published successfully",
-          severity: "success",
-        });
-      }
-    } catch (err) {
+      setSnackbar({
+        open: true,
+        message:
+          status === 1
+            ? "Draft saved successfully"
+            : "Post published successfully",
+        severity: "success",
+      });
+    } catch {
       setSnackbar({
         open: true,
         message:
@@ -346,13 +314,7 @@ const Compose = () => {
       >
         <img src={enqueueLogo} alt="Enqueue" style={{ width: "50px" }} />
       </Button>
-      <Box
-        sx={{
-          maxWidth: 1000,
-          mx: "auto",
-          px: 3,
-        }}
-      >
+      <Box sx={{ maxWidth: 1000, mx: "auto", px: 3 }}>
         {/* Header */}
         <Box
           sx={{
@@ -374,10 +336,7 @@ const Compose = () => {
               color: catppuccin.text,
               fontSize: "2rem",
               fontWeight: 800,
-
-              "&::placeholder": {
-                color: catppuccin.overlay0,
-              },
+              "&::placeholder": { color: catppuccin.overlay0 },
             }}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -393,7 +352,7 @@ const Compose = () => {
               disabled={!postId}
               onClick={() => postId && handleUpdatePost(postId, 1)}
             >
-              Save Draft
+              Save
             </Button>
 
             <Button
@@ -403,10 +362,7 @@ const Compose = () => {
                 fontWeight: 700,
                 bgcolor: catppuccin.mauve,
                 color: catppuccin.base,
-
-                "&:hover": {
-                  bgcolor: catppuccin.pink,
-                },
+                "&:hover": { bgcolor: catppuccin.pink },
               }}
               disabled={!postId}
               onClick={() => postId && handleUpdatePost(postId, 2)}
@@ -438,27 +394,21 @@ const Compose = () => {
               borderBottom: `1px solid ${catppuccin.surface0}`,
             }}
           >
-            {/* Undo */}
             <Tooltip title="Undo">
               <IconButton
                 size="small"
                 onClick={() => editor.chain().focus().undo().run()}
-                sx={{
-                  color: catppuccin.text,
-                }}
+                sx={{ color: catppuccin.text }}
               >
                 <UndoIcon fontSize="small" />
               </IconButton>
             </Tooltip>
 
-            {/* Redo */}
             <Tooltip title="Redo">
               <IconButton
                 size="small"
                 onClick={() => editor.chain().focus().redo().run()}
-                sx={{
-                  color: catppuccin.text,
-                }}
+                sx={{ color: catppuccin.text }}
               >
                 <RedoIcon fontSize="small" />
               </IconButton>
@@ -467,13 +417,9 @@ const Compose = () => {
             <Divider
               orientation="vertical"
               flexItem
-              sx={{
-                mx: 1,
-                borderColor: catppuccin.surface1,
-              }}
+              sx={{ mx: 1, borderColor: catppuccin.surface1 }}
             />
 
-            {/* Block type */}
             <Select
               size="small"
               value={
@@ -497,22 +443,18 @@ const Compose = () => {
                 if (value === "paragraph") {
                   editor.chain().focus().setParagraph().run();
                 }
-
                 if (value === "h1") {
                   editor.chain().focus().toggleHeading({ level: 1 }).run();
                 }
-
                 if (value === "h2") {
                   editor.chain().focus().toggleHeading({ level: 2 }).run();
                 }
-
                 if (value === "h3") {
                   editor.chain().focus().toggleHeading({ level: 3 }).run();
                 }
                 if (value === "h4") {
                   editor.chain().focus().toggleHeading({ level: 4 }).run();
                 }
-
                 if (value === "h5") {
                   editor.chain().focus().toggleHeading({ level: 5 }).run();
                 }
@@ -523,40 +465,27 @@ const Compose = () => {
               sx={{
                 minWidth: 120,
                 color: catppuccin.text,
-
                 "& .MuiOutlinedInput-notchedOutline": {
                   borderColor: catppuccin.surface1,
                 },
-
-                "& .MuiSvgIcon-root": {
-                  color: catppuccin.text,
-                },
+                "& .MuiSvgIcon-root": { color: catppuccin.text },
               }}
             >
-              <MenuItem value="paragraph">Paragraph</MenuItem>
-
-              <MenuItem value="h1">Heading 1</MenuItem>
-
-              <MenuItem value="h2">Heading 2</MenuItem>
-
-              <MenuItem value="h3">Heading 3</MenuItem>
-
-              <MenuItem value="h4">Heading 4</MenuItem>
-              <MenuItem value="h5">Heading 5</MenuItem>
-
-              <MenuItem value="h6">Heading 6</MenuItem>
+              <MenuItem value="paragraph"> Paragraph </MenuItem>
+              <MenuItem value="h1"> Heading 1 </MenuItem>
+              <MenuItem value="h2"> Heading 2 </MenuItem>
+              <MenuItem value="h3"> Heading 3 </MenuItem>
+              <MenuItem value="h4"> Heading 4 </MenuItem>
+              <MenuItem value="h5"> Heading 5 </MenuItem>
+              <MenuItem value="h6"> Heading 6 </MenuItem>
             </Select>
 
             <Divider
               orientation="vertical"
               flexItem
-              sx={{
-                mx: 1,
-                borderColor: catppuccin.surface1,
-              }}
+              sx={{ mx: 1, borderColor: catppuccin.surface1 }}
             />
 
-            {/* Bold */}
             <Tooltip title="Bold">
               <IconButton
                 size="small"
@@ -571,7 +500,6 @@ const Compose = () => {
               </IconButton>
             </Tooltip>
 
-            {/* Italic */}
             <Tooltip title="Italic">
               <IconButton
                 size="small"
@@ -586,7 +514,6 @@ const Compose = () => {
               </IconButton>
             </Tooltip>
 
-            {/* Underline */}
             <Tooltip title="Underline">
               <IconButton
                 size="small"
@@ -601,7 +528,6 @@ const Compose = () => {
               </IconButton>
             </Tooltip>
 
-            {/* Strike */}
             <Tooltip title="Strikethrough">
               <IconButton
                 size="small"
@@ -616,14 +542,11 @@ const Compose = () => {
               </IconButton>
             </Tooltip>
 
-            {/* Text color */}
             <Tooltip title="Text color">
               <IconButton
                 size="small"
                 onClick={toggleColorMenu}
-                sx={{
-                  color: catppuccin.mauve,
-                }}
+                sx={{ color: catppuccin.mauve }}
               >
                 <FormatColorTextIcon fontSize="small" />
               </IconButton>
@@ -633,11 +556,7 @@ const Compose = () => {
               anchorEl={colorAnchor}
               open={Boolean(colorAnchor)}
               onClose={() => setColorAnchor(null)}
-              sx={{
-                "& .MuiPaper-root": {
-                  bgcolor: catppuccin.mantle,
-                },
-              }}
+              sx={{ "& .MuiPaper-root": { bgcolor: catppuccin.mantle } }}
             >
               <Box
                 sx={{
@@ -653,7 +572,6 @@ const Compose = () => {
                     key={color}
                     onClick={() => {
                       editor.chain().focus().setColor(color).run();
-
                       setColorAnchor(null);
                     }}
                     sx={{
@@ -663,24 +581,18 @@ const Compose = () => {
                       bgcolor: color,
                       cursor: "pointer",
                       border: `2px solid ${catppuccin.surface1}`,
-
-                      "&:hover": {
-                        transform: "scale(1.15)",
-                      },
+                      "&:hover": { transform: "scale(1.15)" },
                     }}
                   />
                 ))}
               </Box>
             </Menu>
 
-            {/* Highlight */}
             <Tooltip title="Highlight">
               <IconButton
                 size="small"
                 onClick={toggleHighlightMenu}
-                sx={{
-                  color: catppuccin.yellow,
-                }}
+                sx={{ color: catppuccin.yellow }}
               >
                 <FormatColorFillIcon fontSize="small" />
               </IconButton>
@@ -690,11 +602,7 @@ const Compose = () => {
               anchorEl={highlightAnchor}
               open={Boolean(highlightAnchor)}
               onClose={() => setHighlightAnchor(null)}
-              sx={{
-                "& .MuiPaper-root": {
-                  bgcolor: catppuccin.mantle,
-                },
-              }}
+              sx={{ "& .MuiPaper-root": { bgcolor: catppuccin.mantle } }}
             >
               <Box
                 sx={{
@@ -710,7 +618,6 @@ const Compose = () => {
                     key={color}
                     onClick={() => {
                       editor.chain().focus().toggleHighlight({ color }).run();
-
                       setHighlightAnchor(null);
                     }}
                     sx={{
@@ -728,13 +635,9 @@ const Compose = () => {
             <Divider
               orientation="vertical"
               flexItem
-              sx={{
-                mx: 1,
-                borderColor: catppuccin.surface1,
-              }}
+              sx={{ mx: 1, borderColor: catppuccin.surface1 }}
             />
 
-            {/* Alignment */}
             <Tooltip title="Align left">
               <IconButton
                 size="small"
@@ -771,7 +674,6 @@ const Compose = () => {
               </IconButton>
             </Tooltip>
 
-            {/* Lists */}
             <Tooltip title="Bullet list">
               <IconButton
                 size="small"
@@ -795,13 +697,9 @@ const Compose = () => {
             <Divider
               orientation="vertical"
               flexItem
-              sx={{
-                mx: 1,
-                borderColor: catppuccin.surface1,
-              }}
+              sx={{ mx: 1, borderColor: catppuccin.surface1 }}
             />
 
-            {/* Quote */}
             <Tooltip title="Blockquote">
               <IconButton
                 size="small"
@@ -812,7 +710,6 @@ const Compose = () => {
               </IconButton>
             </Tooltip>
 
-            {/* Code block */}
             <Tooltip title="Code block">
               <IconButton
                 size="small"
@@ -823,10 +720,8 @@ const Compose = () => {
               </IconButton>
             </Tooltip>
 
-            {/* Link */}
             <LinkWidget editor={editor} />
 
-            {/* Image */}
             <input
               type="file"
               accept="image/*"
@@ -846,7 +741,6 @@ const Compose = () => {
               </IconButton>
             </Tooltip>
 
-            {/* Horizontal rule */}
             <Tooltip title="Horizontal rule">
               <IconButton
                 size="small"
@@ -857,34 +751,8 @@ const Compose = () => {
               </IconButton>
             </Tooltip>
 
-            {/* emojis */}
-            <Tooltip title="Emojis">
-              <IconButton
-                size="small"
-                onClick={(event) => setEmojiAnchor(event.currentTarget)}
-              >
-                😊
-              </IconButton>
-            </Tooltip>
-            <Popover
-              open={Boolean(emojiAnchor)}
-              anchorEl={emojiAnchor}
-              onClose={() => setEmojiAnchor(null)}
-              anchorOrigin={{
-                vertical: "bottom",
-                horizontal: "left",
-              }}
-            >
-              <EmojiPicker
-                onEmojiClick={(emojiData) => {
-                  editor.chain().focus().insertContent(emojiData.emoji).run();
+            <EmojiPickerPopover editor={editor} title="Emojis" icon="😊" />
 
-                  setEmojiAnchor(null);
-                }}
-              />
-            </Popover>
-
-            {/* tables */}
             <Tooltip title="Tables">
               <IconButton size="small" onClick={insertTable}>
                 <TableChartSharpIcon
@@ -900,61 +768,47 @@ const Compose = () => {
             sx={{
               px: 5,
               py: 4,
-
               "& .tiptap": {
                 minHeight: 650,
                 outline: "none",
                 color: catppuccin.text,
                 fontSize: "1.05rem",
                 lineHeight: 1.8,
-
-                "& p": {
-                  margin: "0 0 1rem",
-                },
-
+                "& p": { margin: "0 0 1rem" },
                 "& h1": {
                   fontSize: "2.3rem",
                   lineHeight: 1.2,
                   margin: "1.5rem 0 1rem",
                 },
-
                 "& h2": {
                   fontSize: "1.8rem",
                   lineHeight: 1.3,
                   margin: "1.5rem 0 1rem",
                 },
-
                 "& h3": {
                   fontSize: "1.4rem",
                   lineHeight: 1.4,
                   margin: "1.25rem 0 0.75rem",
                 },
-
-                "& ul, & ol": {
-                  paddingLeft: "1.5rem",
-                },
-
+                "& ul, & ol": { paddingLeft: "1.5rem" },
                 "& blockquote": {
                   borderLeft: `3px solid ${catppuccin.mauve}`,
                   paddingLeft: "1rem",
                   marginLeft: 0,
                   color: catppuccin.subtext0,
                 },
-
                 "& code": {
                   backgroundColor: catppuccin.surface0,
                   color: catppuccin.pink,
                   padding: "2px 5px",
                   borderRadius: 1,
                 },
-
                 "& pre": {
                   backgroundColor: catppuccin.crust,
                   padding: "1rem",
                   borderRadius: 2,
                   overflowX: "auto",
                 },
-
                 "& hr": {
                   border: 0,
                   borderTop: `1px solid ${catppuccin.surface1}`,
@@ -970,26 +824,13 @@ const Compose = () => {
       <Snackbar
         open={snackbar.open}
         autoHideDuration={3000}
-        onClose={() =>
-          setSnackbar((prev) => ({
-            ...prev,
-            open: false,
-          }))
-        }
-        anchorOrigin={{
-          vertical: "top",
-          horizontal: "right",
-        }}
+        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: "top", horizontal: "right" }}
       >
         <Alert
           severity={snackbar.severity}
           variant="filled"
-          onClose={() =>
-            setSnackbar((prev) => ({
-              ...prev,
-              open: false,
-            }))
-          }
+          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
         >
           {snackbar.message}
         </Alert>

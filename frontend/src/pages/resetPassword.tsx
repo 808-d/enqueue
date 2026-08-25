@@ -2,8 +2,9 @@ import { useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { Box, Typography, TextField, Button } from "@mui/material";
 import axios from "axios";
-import { useAppTheme } from "../contexts/themeContext";
+import CenteredScreen from "../components/common/centeredScreen";
 import { endpoints } from "../utils/endpoints";
+import { useAppTheme } from "../contexts/themeContext";
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
@@ -59,34 +60,16 @@ export default function ResetPassword() {
 
   if (!token) {
     return (
-      <Box
-        sx={{
-          minHeight: "100vh",
-          bgcolor: catppuccin.base,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          px: 2,
-        }}
-      >
+      <CenteredScreen sx={{ px: 2 }}>
         <Typography sx={{ color: catppuccin.red }}>
           This reset link is invalid or missing a token.
         </Typography>
-      </Box>
+      </CenteredScreen>
     );
   }
 
   return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        bgcolor: catppuccin.base,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        px: 2,
-      }}
-    >
+    <CenteredScreen sx={{ px: 2 }}>
       <Box sx={{ maxWidth: 380, width: "100%" }}>
         {success ? (
           <Box sx={{ textAlign: "center" }}>
@@ -164,6 +147,6 @@ export default function ResetPassword() {
           </>
         )}
       </Box>
-    </Box>
+    </CenteredScreen>
   );
 }

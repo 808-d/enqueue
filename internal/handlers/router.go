@@ -3,13 +3,15 @@ package handlers
 
 import (
 	"enqueue/internal/middlewares"
+	"enqueue/internal/ws"
 	"net/http"
 )
 
 func RegisterUserRoutes(mux *http.ServeMux, h *UsersHandler) {
 	mux.HandleFunc("GET /users", h.GetUsers)
-	mux.HandleFunc("PATCH /users", h.UpdateUser)
-	mux.HandleFunc("DELETE /users", h.DeleteUser)
+	mux.Handle("PATCH /users", middlewares.AuthMiddleware(http.HandlerFunc(h.UpdateUser)))
+	mux.Handle("DELETE /users", middlewares.AuthMiddleware(http.HandlerFunc(h.DeleteUser)))
+	mux.Handle("GET /users/{id}", middlewares.AuthMiddleware(http.HandlerFunc(h.GetUserById)))
 	mux.HandleFunc("GET /me", h.Me)
 	mux.Handle("PATCH /password", middlewares.AuthMiddleware(http.HandlerFunc(h.ChangePassword)))
 }
@@ -35,4 +37,8 @@ func RegisterCommentsRoutes(mux *http.ServeMux, h *CommentsHandler) {
 	mux.Handle("POST /comments", middlewares.AuthMiddleware(http.HandlerFunc(h.CreateComment)))
 	mux.HandleFunc("PATCH /comments", h.UpdateComment)
 	mux.HandleFunc("PATCH /comments/{id}", h.DeleteComment)
+}
+
+func WsRoutes(mux *http.ServeMux, s *ws.Server) {
+	mux.HandleFunc("GET /ws/collab/{roomId}", s.CollabHandler)
 }

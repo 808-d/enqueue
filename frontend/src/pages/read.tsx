@@ -9,12 +9,8 @@ import {
   IconButton,
   Stack,
   Card,
-  MenuItem,
-  Menu,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import EditIcon from "@mui/icons-material/Edit";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { usePosts } from "../hooks/usePosts";
 import type { Post } from "../models/post";
@@ -24,6 +20,7 @@ import { useComments } from "../hooks/useComments";
 import { useAuth } from "../contexts/authContext";
 import { commentReducer, initialState } from "../reducers/commentReducer";
 import CommentCard from "../components/shared/commentCard";
+import EditDeleteMenu from "../components/common/editDeleteMenu";
 
 export default function Read() {
   const navigate = useNavigate();
@@ -344,40 +341,23 @@ export default function Read() {
                 </Card>
               ))
             )}
-            <Menu
+            <EditDeleteMenu
               anchorEl={commentMenuAnchor}
               open={Boolean(commentMenuAnchor)}
               onClose={handleCommentMenuClose}
-            >
-              <MenuItem
-                onClick={() => {
-                  if (selectedComment) {
-                    handleEditComment(selectedComment);
-                  }
+              onEdit={() => {
+                if (selectedComment) {
+                  handleEditComment(selectedComment);
+                }
+              }}
+              onDelete={() => {
+                if (selectedComment) {
+                  handleDeleteComment(selectedComment.ID);
+                }
 
-                  handleCommentMenuClose();
-                }}
-              >
-                <EditIcon fontSize="small" sx={{ mr: 1 }} />
-                Edit
-              </MenuItem>
-
-              <MenuItem
-                onClick={() => {
-                  if (selectedComment) {
-                    handleDeleteComment(selectedComment.ID);
-                  }
-
-                  handleCommentMenuClose();
-                }}
-                sx={{
-                  color: "#f38ba8",
-                }}
-              >
-                <DeleteOutlineIcon fontSize="small" sx={{ mr: 1 }} />
-                Delete
-              </MenuItem>
-            </Menu>
+                handleCommentMenuClose();
+              }}
+            />
           </Stack>
 
           {/* New comment */}
