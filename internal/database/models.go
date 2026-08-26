@@ -36,14 +36,6 @@ type Compose struct {
 	Role       string
 }
 
-type EmailVerification struct {
-	ID        pgtype.UUID
-	UserID    pgtype.UUID
-	Token     string
-	ExpiresAt pgtype.Timestamptz
-	CreatedAt pgtype.Timestamptz
-}
-
 type Follow struct {
 	FollowerID  pgtype.UUID
 	FollowingID pgtype.UUID
@@ -54,6 +46,16 @@ type Like struct {
 	UserID     pgtype.UUID
 	PostID     pgtype.UUID
 	CreateTime pgtype.Timestamp
+}
+
+type Notification struct {
+	ID          pgtype.UUID
+	RecipientID pgtype.UUID
+	ActorID     pgtype.UUID
+	Type        string
+	EntityID    pgtype.UUID
+	ReadAt      pgtype.Timestamptz
+	CreateTime  pgtype.Timestamptz
 }
 
 type Post struct {

@@ -13,6 +13,7 @@ import { useAppTheme } from "./contexts/themeContext";
 import { useEffect } from "react";
 import { Box } from "@mui/material";
 import ResetPassword from "./pages/resetPassword";
+import Activity from "./pages/activity";
 
 // import Profile from "./pages/profile";
 function App() {
@@ -43,6 +44,7 @@ function App() {
           <Route path="/settings" element={<Settings />} />
           <Route path="/verify-email-change" element={<VerifyEmailChange />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/activity" element={<Activity />} />
         </Routes>
       </BrowserRouter>
     </Box>

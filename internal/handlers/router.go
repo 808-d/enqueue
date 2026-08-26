@@ -31,6 +31,7 @@ func RegisterAuthRoutes(mux *http.ServeMux, h *AuthHandler) {
 	mux.HandleFunc("GET /verify-email-change", h.VerifyEmailChange)
 	mux.HandleFunc("POST /forgot-password", h.ForgotPassword)
 	mux.HandleFunc("POST /reset-password", h.ResetPassword)
+	mux.HandleFunc("POST /logout", h.Logout)
 }
 func RegisterCommentsRoutes(mux *http.ServeMux, h *CommentsHandler) {
 	// mux.HandleFunc("GET /comments", h.Login)
@@ -39,6 +40,23 @@ func RegisterCommentsRoutes(mux *http.ServeMux, h *CommentsHandler) {
 	mux.HandleFunc("PATCH /comments/{id}", h.DeleteComment)
 }
 
-func WsRoutes(mux *http.ServeMux, s *ws.Server) {
-	mux.HandleFunc("GET /ws/collab/{roomId}", s.CollabHandler)
+func RegisterFollowRoutes(mux *http.ServeMux, h *FollowsHandler) {
+	mux.Handle("POST /follows", middlewares.AuthMiddleware(http.HandlerFunc(h.FollowUser)))
+	mux.Handle("DELETE /follows", middlewares.AuthMiddleware(http.HandlerFunc(h.UnfollowUser)))
+	mux.HandleFunc("GET /follows/followers/{id}", h.GetFollowers)
+	mux.HandleFunc("GET /follows/following/{id}", h.GetFollowing)
+	mux.Handle("POST /follows/is-following", middlewares.AuthMiddleware(http.HandlerFunc(h.IsFollowing)))
+	mux.HandleFunc("GET /follows/count/followers/{id}", h.CountFollowers)
+	mux.HandleFunc("GET /follows/count/following/{id}", h.CountFollowing)
+}
+
+func RegisterNotificationRoutes(mux *http.ServeMux, h *NotisHandler) {
+	mux.Handle("GET /notifications", middlewares.AuthMiddleware(http.HandlerFunc(h.GetNotifications)))
+	mux.Handle("GET /notifications/unread-count", middlewares.AuthMiddleware(http.HandlerFunc(h.GetUnreadCount)))
+	mux.Handle("PATCH /notifications/{id}/read", middlewares.AuthMiddleware(http.HandlerFunc(h.MarkAsRead)))
+	mux.Handle("PATCH /notifications/read-all", middlewares.AuthMiddleware(http.HandlerFunc(h.MarkAllAsRead)))
+}
+
+func WsRoutes(mux *http.ServeMux, s *ws.NotificationHub) {
+	mux.HandleFunc("GET /ws/subscribe", s.SubscribeHandler)
 }

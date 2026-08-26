@@ -1,4 +1,4 @@
-import { Box, Button, Grid, Stack } from "@mui/material";
+import { Box, Button, Grid, Stack, Badge, Menu, MenuItem, ListItemIcon, ListItemText, Divider } from "@mui/material";
 import { useAuth } from "../../contexts/authContext";
 import { Link, useLocation } from "react-router-dom";
 import HomeFilledIcon from "@mui/icons-material/HomeFilled";
@@ -9,12 +9,17 @@ import SearchIcon from "@mui/icons-material/Search";
 import { Person } from "@mui/icons-material";
 import LoginIcon from "@mui/icons-material/Login";
 import SettingsIcon from "@mui/icons-material/Settings";
+import LogoutIcon from "@mui/icons-material/Logout";
 import { useAppTheme } from "../../contexts/themeContext";
+import { useNotifications } from "../../contexts/notificationContext";
+import { useState } from "react";
 
 export function Left() {
-  const { user, loading } = useAuth();
+  const { user, loading, logout } = useAuth();
   const { catppuccin } = useAppTheme();
   const location = useLocation();
+  const { unreadCount } = useNotifications();
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   if (loading) {
     return null;
@@ -72,14 +77,18 @@ export function Left() {
             </Box>
           </Button>
 
-          <Button
-            startIcon={<NotificationsIcon />}
-            sx={navButtonSx("/activity")}
-          >
-            <Box component="span" sx={labelSx}>
-              Activity
-            </Box>
-          </Button>
+          <Badge badgeContent={unreadCount} color="error" sx={{ "& .MuiBadge-badge": { fontSize: 10, minWidth: 16, height: 16 } }}>
+            <Button
+              component={Link}
+              to="/activity"
+              startIcon={<NotificationsIcon />}
+              sx={navButtonSx("/activity")}
+            >
+              <Box component="span" sx={labelSx}>
+                Activity
+              </Box>
+            </Button>
+          </Badge>
         </>
       )}
 
@@ -103,16 +112,46 @@ export function Left() {
       )}
 
       {user ? (
-        <Button
-          component={Link}
-          to={`/profile?id=${user.id}`}
-          startIcon={<Person />}
-          sx={{ ...navButtonSx("/profile"), mt: { xs: 0, sm: 1 } }}
-        >
-          <Box component="span" sx={labelSx}>
-            {user.username}
-          </Box>
-        </Button>
+        <>
+          <Button
+            startIcon={<Person />}
+            sx={{ ...navButtonSx("/profile"), mt: { xs: 0, sm: 1 } }}
+            onClick={(e) => setAnchorEl(e.currentTarget)}
+          >
+            <Box component="span" sx={labelSx}>
+              {user.username}
+            </Box>
+          </Button>
+          <Menu
+            anchorEl={anchorEl}
+            open={Boolean(anchorEl)}
+            onClose={() => setAnchorEl(null)}
+            sx={{ mt: 1 }}
+          >
+            <MenuItem
+              component={Link}
+              to={`/profile?id=${user.id}`}
+              onClick={() => setAnchorEl(null)}
+            >
+              <ListItemIcon>
+                <Person sx={{ color: catppuccin.text }} />
+              </ListItemIcon>
+              <ListItemText primary="Profile" />
+            </MenuItem>
+            <Divider />
+            <MenuItem
+              onClick={async () => {
+                setAnchorEl(null);
+                await logout();
+              }}
+            >
+              <ListItemIcon>
+                <LogoutIcon sx={{ color: catppuccin.red }} />
+              </ListItemIcon>
+              <ListItemText primary="Logout" />
+            </MenuItem>
+          </Menu>
+        </>
       ) : (
         <Button
           component={Link}

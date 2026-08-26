@@ -15,6 +15,7 @@ type AuthContextType = {
   loading: boolean;
   setUser: React.Dispatch<React.SetStateAction<User | null>>;
   refreshUser: () => Promise<void>;
+  logout: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -46,8 +47,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await fetchUser();
   };
 
+  const logout = async () => {
+    try {
+      await axios.post(endpoints.logout, {}, { withCredentials: true });
+    } catch {
+      // ignore
+    }
+    setUser(null);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, setUser, refreshUser }}>
+    <AuthContext.Provider value={{ user, loading, setUser, refreshUser, logout }}>
       {children}
     </AuthContext.Provider>
   );

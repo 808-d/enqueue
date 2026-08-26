@@ -33,25 +33,70 @@ import { useAppTheme } from "../contexts/themeContext";
 import { Link } from "react-router-dom";
 import type { ProfileData } from "../models/proifleData";
 import { useUsers } from "../hooks/useUsers";
+import { useFollows } from "../hooks/useFollows";
 export function Profile() {
   const { catppuccin } = useAppTheme();
-
+  const { user } = useAuth();
   const { createPost, getPostsByUser, updatePostStatus } = usePosts();
+  const {
+    followUser,
+    unfollowUser,
+    isFollowing: checkIsFollowing,
+    countFollowers,
+    countFollowing,
+  } = useFollows();
+  const { getUserById } = useUsers();
+  const [searchParams] = useSearchParams();
+  const userId = searchParams.get("id");
+  const [value, setValue] = useState(1);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [profile, setProfile] = useState<ProfileData>();
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followersCount, setFollowersCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const [createAnchorEl, setCreateAnchorEl] = useState<null | HTMLElement>(
     null,
   );
-  const { getUserById } = useUsers();
-  const [searchParams] = useSearchParams();
-  const userId = searchParams.get("id");
-  const [value, setValue] = useState("1");
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [user, setUser] = useState<ProfileData>();
-  const [isFollowing, setIsFollowing] = useState(false);
   const hasLoaded = useRef(false);
   const navigate = useNavigate();
-  const handleChange = (newValue: string) => {
-    setValue(newValue);
+
+  useEffect(() => {
+    if (!userId || !user || user.id === userId) return;
+    const loadFollowStatus = async () => {
+      try {
+        const following = await checkIsFollowing(userId);
+        setIsFollowing(following);
+      } catch {
+        setIsFollowing(false);
+      }
+    };
+    loadFollowStatus();
+  }, [userId, user]);
+
+  useEffect(() => {
+    if (!userId) return;
+    const loadCounts = async () => {
+      try {
+        const [followers, following] = await Promise.all([
+          countFollowers(userId),
+          countFollowing(userId),
+        ]);
+        setFollowersCount(followers);
+        setFollowingCount(following);
+      } catch {
+        setFollowersCount(0);
+        setFollowingCount(0);
+      }
+    };
+    loadCounts();
+  }, [userId]);
+  const handleChange = (
+    _event: React.SyntheticEvent,
+    newValue: string | number,
+  ) => {
+    setValue(typeof newValue === "number" ? newValue : Number(newValue));
   };
 
   const createMenuOpen = Boolean(createAnchorEl);
@@ -77,7 +122,7 @@ export function Profile() {
     hasLoaded.current = true;
     const getUser = async () => {
       const response = await getUserById(userId);
-      setUser(response.data);
+      setProfile(response.data);
     };
     const loadPosts = async () => {
       const response = await getPostsByUser(userId);
@@ -98,7 +143,7 @@ export function Profile() {
     return null;
   }
 
-  const isOwnProfile = !userId;
+  const isOwnProfile = user.id == userId;
 
   return (
     <Grid container sx={{ minHeight: "100vh" }}>
@@ -129,7 +174,7 @@ export function Profile() {
               }}
             >
               <Avatar
-                src={user.Avatar ?? undefined}
+                src={profile?.Avatar ?? undefined}
                 sx={{
                   width: 110,
                   height: 110,
@@ -141,7 +186,7 @@ export function Profile() {
                   flexShrink: 0,
                 }}
               >
-                {user.Username.charAt(0).toUpperCase()}
+                {profile?.Username.charAt(0).toUpperCase()}
               </Avatar>
 
               <Box sx={{ minWidth: 0 }}>
@@ -153,7 +198,7 @@ export function Profile() {
                     letterSpacing: "-0.02em",
                   }}
                 >
-                  {user.Username}
+                  {profile?.Username}
                 </Typography>
                 <Typography
                   sx={{
@@ -162,13 +207,13 @@ export function Profile() {
                     fontSize: "0.95rem",
                   }}
                 >
-                  @{user.Username}
+                  @{profile?.Username}
                 </Typography>
               </Box>
             </Box>
 
             {/* Bio */}
-            {user.Bio && (
+            {profile?.Bio && (
               <Typography
                 sx={{
                   mt: 2,
@@ -179,7 +224,7 @@ export function Profile() {
                   textAlign: "left",
                 }}
               >
-                {user.Bio}
+                {profile?.Bio}
               </Typography>
             )}
 
@@ -206,9 +251,9 @@ export function Profile() {
               }}
             >
               {[
-                { label: "Posts", value: 42 },
-                { label: "Followers", value: 128 },
-                { label: "Following", value: 83 },
+                { label: "Posts", value: postsByStatus.published.length },
+                { label: "Followers", value: followersCount },
+                { label: "Following", value: followingCount },
               ].map((stat) => (
                 <Box
                   key={stat.label}
@@ -363,7 +408,23 @@ export function Profile() {
                         variant="contained"
                         fullWidth
                         size="large"
-                        onClick={() => setIsFollowing((prev) => !prev)}
+                        onClick={async () => {
+                          if (loading || !userId) return;
+                          setLoading(true);
+                          try {
+                            if (isFollowing) {
+                              await unfollowUser(userId);
+                            } else {
+                              await followUser(userId);
+                            }
+                            setIsFollowing((prev) => !prev);
+                          } catch {
+                            setError(true);
+                          } finally {
+                            setLoading(false);
+                          }
+                        }}
+                        disabled={loading}
                         sx={{
                           bgcolor: isFollowing
                             ? catppuccin.surface1
@@ -441,13 +502,13 @@ export function Profile() {
                       },
                     }}
                   >
-                    <Tab label="Posts" value="1" />
-                    <Tab label="Reposts" value="2" />
-                    <Tab label="Liked" value="3" />
-                    <Tab label="Drafts" value="4" />
+                    <Tab label="Posts" value={1} />
+                    <Tab label="Reposts" value={2} />
+                    <Tab label="Liked" value={3} />
+                    <Tab label="Drafts" value={4} />
                   </TabList>
                 </Box>
-                <TabPanel value="1" sx={{ px: 0 }}>
+                <TabPanel value={1} sx={{ px: 0 }}>
                   <Box
                     sx={{
                       display: "flex",
@@ -481,7 +542,7 @@ export function Profile() {
                     ))}
                   </Box>
                 </TabPanel>
-                <TabPanel value="2" sx={{ px: 0 }}>
+                <TabPanel value={2} sx={{ px: 0 }}>
                   <Typography
                     sx={{
                       color: catppuccin.overlay0,
@@ -492,7 +553,7 @@ export function Profile() {
                     Reposts
                   </Typography>
                 </TabPanel>
-                <TabPanel value="3" sx={{ px: 0 }}>
+                <TabPanel value={3} sx={{ px: 0 }}>
                   <Typography
                     sx={{
                       color: catppuccin.overlay0,
@@ -503,7 +564,7 @@ export function Profile() {
                     Liked
                   </Typography>
                 </TabPanel>
-                <TabPanel value="4" sx={{ px: 0 }}>
+                <TabPanel value={4} sx={{ px: 0 }}>
                   <Box
                     sx={{
                       display: "flex",

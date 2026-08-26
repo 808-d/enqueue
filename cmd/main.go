@@ -15,6 +15,7 @@ import (
 	"enqueue/internal/database"
 	"enqueue/internal/handlers"
 	"enqueue/internal/services"
+	"enqueue/internal/ws"
 )
 
 func main() {
@@ -55,12 +56,23 @@ func main() {
 	commentService := services.NewCommentService(queries)
 	commentHandler := handlers.NewCommentssHandler(commentService)
 
+	server := ws.NewNotificationHub()
+
+	followsService := services.NewFollowsService(pool, server)
+	followsHandler := handlers.NewFollowsHandler(followsService)
+
+	notisService := services.NewNotisService(queries, server)
+	notisHandler := handlers.NewNotisHandler(notisService)
+
 	mux := http.NewServeMux()
 	handlers.RegisterUserRoutes(mux, usersHandler)
 	handlers.RegisterPostRoutes(mux, postsHandler)
 	handlers.RegisterAuthRoutes(mux, authHandler)
 	handlers.RegisterCommentsRoutes(mux, commentHandler)
+	handlers.RegisterFollowRoutes(mux, followsHandler)
+	handlers.RegisterNotificationRoutes(mux, notisHandler)
 
+	handlers.WsRoutes(mux, server)
 	// middlewares
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{os.Getenv("FRONTEND_URL"), os.Getenv("BACKEND_URL")},
