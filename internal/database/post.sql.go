@@ -59,6 +59,42 @@ func (q *Queries) GetPostById(ctx context.Context, id pgtype.UUID) (Post, error)
 	return i, err
 }
 
+const getPostWithOwner = `-- name: GetPostWithOwner :one
+SELECT p.create_time, p.update_time, p.id, p.title, p.content, p.thumbnail, p.description, p.status, c.user_id
+FROM posts p
+INNER JOIN composes c ON p.id = c.post_id
+WHERE p.id = $1 AND p.status <> 0
+`
+
+type GetPostWithOwnerRow struct {
+	CreateTime  pgtype.Timestamp
+	UpdateTime  pgtype.Timestamp
+	ID          pgtype.UUID
+	Title       pgtype.Text
+	Content     pgtype.Text
+	Thumbnail   pgtype.Text
+	Description pgtype.Text
+	Status      int32
+	UserID      pgtype.UUID
+}
+
+func (q *Queries) GetPostWithOwner(ctx context.Context, id pgtype.UUID) (GetPostWithOwnerRow, error) {
+	row := q.db.QueryRow(ctx, getPostWithOwner, id)
+	var i GetPostWithOwnerRow
+	err := row.Scan(
+		&i.CreateTime,
+		&i.UpdateTime,
+		&i.ID,
+		&i.Title,
+		&i.Content,
+		&i.Thumbnail,
+		&i.Description,
+		&i.Status,
+		&i.UserID,
+	)
+	return i, err
+}
+
 const getPostsByUser = `-- name: GetPostsByUser :many
 SELECT p.create_time, p.update_time, p.id, p.title, p.content, p.thumbnail, p.description, p.status FROM posts p
 INNER JOIN composes c 

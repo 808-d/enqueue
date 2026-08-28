@@ -1,5 +1,4 @@
 import {
-  Avatar,
   Box,
   Button,
   Divider,
@@ -34,6 +33,7 @@ import { Link } from "react-router-dom";
 import type { ProfileData } from "../models/proifleData";
 import { useUsers } from "../hooks/useUsers";
 import { useFollows } from "../hooks/useFollows";
+import Avatar from "../components/common/Avatar";
 export function Profile() {
   const { catppuccin } = useAppTheme();
   const { user } = useAuth();
@@ -174,20 +174,14 @@ export function Profile() {
               }}
             >
               <Avatar
-                src={profile?.Avatar ?? undefined}
+                username={profile?.Username ?? null}
+                avatar={profile?.Avatar ?? null}
+                size={110}
                 sx={{
-                  width: 110,
-                  height: 110,
-                  bgcolor: catppuccin.mauve,
-                  color: catppuccin.base,
-                  fontSize: 42,
-                  fontWeight: 700,
                   border: `4px solid ${catppuccin.base}`,
                   flexShrink: 0,
                 }}
-              >
-                {profile?.Username.charAt(0).toUpperCase()}
-              </Avatar>
+              />
 
               <Box sx={{ minWidth: 0 }}>
                 <Typography

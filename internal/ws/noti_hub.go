@@ -17,11 +17,6 @@ type NotificationHub struct {
 	mu    sync.Mutex
 	conns map[uuid.UUID]map[*websocket.Conn]struct{}
 }
-type subscriber struct {
-	conn   *websocket.Conn
-	msgs   chan []byte
-	userID uuid.UUID
-}
 
 func NewNotificationHub() *NotificationHub {
 	return &NotificationHub{
@@ -77,7 +72,7 @@ func (h *NotificationHub) PushToUser(userID uuid.UUID, payload any) {
 }
 
 func (h *NotificationHub) SubscribeHandler(w http.ResponseWriter, r *http.Request) {
-	userID, err := utils.GetUserIDFromAuth(r) // reuse your existing auth extraction
+	userID, err := utils.GetUserIDFromAuth(r)
 	if err != nil {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return

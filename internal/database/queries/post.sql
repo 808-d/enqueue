@@ -39,3 +39,9 @@ ORDER BY p.id, p.create_time;
 
 -- name: GetPostById :one
 SELECT * FROM POSTS WHERE Id = $1 AND STATUS <> 0;
+
+-- name: GetPostWithOwner :one
+SELECT p.*, c.user_id
+FROM posts p
+INNER JOIN composes c ON p.id = c.post_id
+WHERE p.id = $1 AND p.status <> 0;

@@ -53,15 +53,20 @@ func main() {
 	authService := services.NewAuthService(pool, rdb)
 	authHandler := handlers.NewAuthHandler(authService)
 
-	commentService := services.NewCommentService(queries)
+	notiHub := ws.NewNotificationHub()
+	postHub := ws.NewPostHub()
+
+	notisService := services.NewNotisService(queries, notiHub)
+
+	commentService := services.NewCommentService(queries, notisService, postHub, pool)
 	commentHandler := handlers.NewCommentssHandler(commentService)
 
-	server := ws.NewNotificationHub()
-
-	followsService := services.NewFollowsService(pool, server)
+	followsService := services.NewFollowsService(pool, notiHub)
 	followsHandler := handlers.NewFollowsHandler(followsService)
 
-	notisService := services.NewNotisService(queries, server)
+	likeService := services.NewLikeService(queries, notiHub, pool)
+	likeHandler := handlers.NewLikeHandler(likeService)
+
 	notisHandler := handlers.NewNotisHandler(notisService)
 
 	mux := http.NewServeMux()
@@ -70,9 +75,10 @@ func main() {
 	handlers.RegisterAuthRoutes(mux, authHandler)
 	handlers.RegisterCommentsRoutes(mux, commentHandler)
 	handlers.RegisterFollowRoutes(mux, followsHandler)
+	handlers.RegisterLikeRoutes(mux, likeHandler)
 	handlers.RegisterNotificationRoutes(mux, notisHandler)
 
-	handlers.WsRoutes(mux, server)
+	handlers.WsRoutes(mux, notiHub, postHub)
 	// middlewares
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{os.Getenv("FRONTEND_URL"), os.Getenv("BACKEND_URL")},

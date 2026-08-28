@@ -1,29 +1,22 @@
-import {
-  Avatar,
-  Box,
-  Card,
-  CardContent,
-  IconButton,
-  Stack,
-  Typography,
-} from "@mui/material";
+import { Box, Card, CardContent, IconButton, Stack, Typography } from "@mui/material";
 
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import type { Comment } from "../../models/comment";
 import type { User } from "../../models/user";
+import Avatar from "../../components/common/Avatar";
 
 type CommentCardProps = {
   comment: Comment;
-  user?: User | null;
+  currentUser?: User | null;
   onMenuOpen: (event: React.MouseEvent<HTMLElement>, comment: Comment) => void;
 };
 
 export default function CommentCard({
   comment,
-  user,
+  currentUser,
   onMenuOpen,
 }: CommentCardProps) {
-  const isOwner = comment.UserID === user?.id;
+  const isOwner = comment.UserID === currentUser?.id;
 
   return (
     <Card
@@ -56,19 +49,7 @@ export default function CommentCard({
                 gap: 1,
               }}
             >
-              <Avatar
-                src={user?.avatar ?? undefined}
-                sx={{
-                  width: 32,
-                  height: 32,
-                  bgcolor: "#cba6f7",
-                  color: "#1e1e2e",
-                  fontSize: 14,
-                  fontWeight: 700,
-                }}
-              >
-                {user?.username.charAt(0).toUpperCase()}
-              </Avatar>
+              <Avatar username={comment.Username} avatar={comment.Avatar} size={32} />
 
               <Typography
                 variant="subtitle2"
@@ -78,7 +59,7 @@ export default function CommentCard({
                   textAlign: "left",
                 }}
               >
-                {user?.username ?? "Unknown user"}
+                {comment.Username ?? "Unknown user"}
               </Typography>
             </Box>
 

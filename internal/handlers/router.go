@@ -15,9 +15,15 @@ func RegisterUserRoutes(mux *http.ServeMux, h *UsersHandler) {
 	mux.HandleFunc("GET /me", h.Me)
 	mux.Handle("PATCH /password", middlewares.AuthMiddleware(http.HandlerFunc(h.ChangePassword)))
 }
+func RegisterLikeRoutes(mux *http.ServeMux, h *LikeHandler) {
+	mux.Handle("POST /posts/like/{postId}", middlewares.AuthMiddleware(http.HandlerFunc(h.LikePost)))
+	mux.Handle("DELETE /posts/like/{postId}", middlewares.AuthMiddleware(http.HandlerFunc(h.UnlikePost)))
+	mux.Handle("GET /posts/like/{postId}", middlewares.AuthMiddleware(http.HandlerFunc(h.GetLikeStatus)))
+}
+
 func RegisterPostRoutes(mux *http.ServeMux, h *PostsHandler) {
 	mux.HandleFunc("GET /posts", h.GetPosts)
-	mux.HandleFunc("GET /posts/p/{id}", h.GetPostsByUser)
+	mux.HandleFunc("GET /posts/user/{id}", h.GetPostsByUser)
 	mux.HandleFunc("GET /posts/{id}", h.GetPostById)
 	mux.Handle("POST /posts", middlewares.AuthMiddleware(http.HandlerFunc(h.CreatePost)))
 	mux.Handle("PATCH /posts", middlewares.AuthMiddleware(http.HandlerFunc(h.UpdatePost)))
@@ -36,8 +42,8 @@ func RegisterAuthRoutes(mux *http.ServeMux, h *AuthHandler) {
 func RegisterCommentsRoutes(mux *http.ServeMux, h *CommentsHandler) {
 	// mux.HandleFunc("GET /comments", h.Login)
 	mux.Handle("POST /comments", middlewares.AuthMiddleware(http.HandlerFunc(h.CreateComment)))
-	mux.HandleFunc("PATCH /comments", h.UpdateComment)
-	mux.HandleFunc("PATCH /comments/{id}", h.DeleteComment)
+	mux.Handle("PATCH /comments", middlewares.AuthMiddleware(http.HandlerFunc(h.UpdateComment)))
+	mux.Handle("PATCH /comments/{id}", middlewares.AuthMiddleware(http.HandlerFunc(h.DeleteComment)))
 }
 
 func RegisterFollowRoutes(mux *http.ServeMux, h *FollowsHandler) {
@@ -57,6 +63,7 @@ func RegisterNotificationRoutes(mux *http.ServeMux, h *NotisHandler) {
 	mux.Handle("PATCH /notifications/read-all", middlewares.AuthMiddleware(http.HandlerFunc(h.MarkAllAsRead)))
 }
 
-func WsRoutes(mux *http.ServeMux, s *ws.NotificationHub) {
+func WsRoutes(mux *http.ServeMux, s *ws.NotificationHub, p *ws.PostHub) {
 	mux.HandleFunc("GET /ws/subscribe", s.SubscribeHandler)
+	mux.HandleFunc("GET /ws/post/{postId}", p.EnterHandler)
 }

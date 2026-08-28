@@ -7,7 +7,7 @@ export function usePosts() {
   const navigate = useNavigate();
 
   async function getPostsByUser(userId: string) {
-    return await axios.get(`${endpoints.posts}/p/${userId}`, {
+    return await axios.get(`${endpoints.posts}/user/${userId}`, {
       withCredentials: true,
     });
   }

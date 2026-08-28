@@ -4,7 +4,6 @@ import {
   Tabs,
   Tab,
   Stack,
-  Avatar,
   Typography,
   IconButton,
   Menu,
@@ -16,8 +15,9 @@ import MoreVertIcon from "@mui/icons-material/MoreVert";
 import PersonRemoveOutlinedIcon from "@mui/icons-material/PersonRemoveOutlined";
 import BlockOutlinedIcon from "@mui/icons-material/BlockOutlined";
 import { useAppTheme } from "../../contexts/themeContext";
+import Avatar from "../../components/common/Avatar";
 
-type FollowUser = { id: string; username: string; bio?: string };
+type FollowUser = { id: string; username: string; bio?: string; avatar?: string | null };
 
 const initialFollowing: FollowUser[] = [
   { id: "1", username: "hana_dev", bio: "Building things in Go" },
@@ -99,9 +99,7 @@ export default function FollowingTab() {
               "&:hover": { bgcolor: catppuccin.surface0 },
             }}
           >
-            <Avatar sx={{ bgcolor: catppuccin.mauve }}>
-              {followUser.username[0]?.toUpperCase()}
-            </Avatar>
+            <Avatar username={followUser.username} avatar={followUser.avatar ?? null} size={40} />
             <Box sx={{ flex: 1, minWidth: 0 }}>
               <Typography sx={{ color: catppuccin.text, fontWeight: 600 }}>
                 {followUser.username}

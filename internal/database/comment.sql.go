@@ -12,11 +12,20 @@ import (
 )
 
 const createComment = `-- name: CreateComment :one
-INSERT INTO comments
-    (user_id, post_id, content, reply_to)
-VALUES
-    ($1, $2, $3, $4)
-RETURNING is_delete, create_time, update_time, id, user_id, post_id, content, reply_to
+WITH new_comment AS (
+    INSERT INTO comments
+        (user_id, post_id, content, reply_to)
+    VALUES
+        ($1, $2, $3, $4)
+    RETURNING is_delete, create_time, update_time, id, user_id, post_id, content, reply_to
+)
+SELECT
+    c.is_delete, c.create_time, c.update_time, c.id, c.user_id, c.post_id, c.content, c.reply_to,
+    u.avatar,
+    u.username
+FROM new_comment c
+INNER JOIN users u
+    ON c.user_id = u.id
 `
 
 type CreateCommentParams struct {
@@ -26,14 +35,27 @@ type CreateCommentParams struct {
 	ReplyTo pgtype.UUID
 }
 
-func (q *Queries) CreateComment(ctx context.Context, arg CreateCommentParams) (Comment, error) {
+type CreateCommentRow struct {
+	IsDelete   bool
+	CreateTime pgtype.Timestamp
+	UpdateTime pgtype.Timestamp
+	ID         pgtype.UUID
+	UserID     pgtype.UUID
+	PostID     pgtype.UUID
+	Content    string
+	ReplyTo    pgtype.UUID
+	Avatar     pgtype.Text
+	Username   string
+}
+
+func (q *Queries) CreateComment(ctx context.Context, arg CreateCommentParams) (CreateCommentRow, error) {
 	row := q.db.QueryRow(ctx, createComment,
 		arg.UserID,
 		arg.PostID,
 		arg.Content,
 		arg.ReplyTo,
 	)
-	var i Comment
+	var i CreateCommentRow
 	err := row.Scan(
 		&i.IsDelete,
 		&i.CreateTime,
@@ -43,20 +65,44 @@ func (q *Queries) CreateComment(ctx context.Context, arg CreateCommentParams) (C
 		&i.PostID,
 		&i.Content,
 		&i.ReplyTo,
+		&i.Avatar,
+		&i.Username,
 	)
 	return i, err
 }
 
 const deleteComment = `-- name: DeleteComment :one
-UPDATE comments
-SET is_delete = true
-WHERE id = $1
-RETURNING is_delete, create_time, update_time, id, user_id, post_id, content, reply_to
+WITH deleted_comment AS (
+    UPDATE comments
+    SET is_delete = true
+    WHERE comments.id = $1
+    RETURNING is_delete, create_time, update_time, id, user_id, post_id, content, reply_to
+)
+SELECT
+    deleted_comment.is_delete, deleted_comment.create_time, deleted_comment.update_time, deleted_comment.id, deleted_comment.user_id, deleted_comment.post_id, deleted_comment.content, deleted_comment.reply_to,
+    u.avatar,
+    u.username
+FROM deleted_comment
+JOIN users AS u
+    ON deleted_comment.user_id = u.id
 `
 
-func (q *Queries) DeleteComment(ctx context.Context, id pgtype.UUID) (Comment, error) {
+type DeleteCommentRow struct {
+	IsDelete   bool
+	CreateTime pgtype.Timestamp
+	UpdateTime pgtype.Timestamp
+	ID         pgtype.UUID
+	UserID     pgtype.UUID
+	PostID     pgtype.UUID
+	Content    string
+	ReplyTo    pgtype.UUID
+	Avatar     pgtype.Text
+	Username   string
+}
+
+func (q *Queries) DeleteComment(ctx context.Context, id pgtype.UUID) (DeleteCommentRow, error) {
 	row := q.db.QueryRow(ctx, deleteComment, id)
-	var i Comment
+	var i DeleteCommentRow
 	err := row.Scan(
 		&i.IsDelete,
 		&i.CreateTime,
@@ -66,24 +112,41 @@ func (q *Queries) DeleteComment(ctx context.Context, id pgtype.UUID) (Comment, e
 		&i.PostID,
 		&i.Content,
 		&i.ReplyTo,
+		&i.Avatar,
+		&i.Username,
 	)
 	return i, err
 }
 
 const getCommentsByPost = `-- name: GetCommentsByPost :many
-select is_delete, create_time, update_time, id, user_id, post_id, content, reply_to from comments c
-where C.post_id  = $1 and is_delete = false
+select c.is_delete, c.create_time, c.update_time, c.id, c.user_id, c.post_id, c.content, c.reply_to,u.avatar ,u.username  from comments c
+inner join users U
+on c.user_id = u.id
+where C.post_id  = $1 and c.is_delete = false
 `
 
-func (q *Queries) GetCommentsByPost(ctx context.Context, postID pgtype.UUID) ([]Comment, error) {
+type GetCommentsByPostRow struct {
+	IsDelete   bool
+	CreateTime pgtype.Timestamp
+	UpdateTime pgtype.Timestamp
+	ID         pgtype.UUID
+	UserID     pgtype.UUID
+	PostID     pgtype.UUID
+	Content    string
+	ReplyTo    pgtype.UUID
+	Avatar     pgtype.Text
+	Username   string
+}
+
+func (q *Queries) GetCommentsByPost(ctx context.Context, postID pgtype.UUID) ([]GetCommentsByPostRow, error) {
 	rows, err := q.db.Query(ctx, getCommentsByPost, postID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Comment
+	var items []GetCommentsByPostRow
 	for rows.Next() {
-		var i Comment
+		var i GetCommentsByPostRow
 		if err := rows.Scan(
 			&i.IsDelete,
 			&i.CreateTime,
@@ -93,6 +156,8 @@ func (q *Queries) GetCommentsByPost(ctx context.Context, postID pgtype.UUID) ([]
 			&i.PostID,
 			&i.Content,
 			&i.ReplyTo,
+			&i.Avatar,
+			&i.Username,
 		); err != nil {
 			return nil, err
 		}
@@ -105,12 +170,21 @@ func (q *Queries) GetCommentsByPost(ctx context.Context, postID pgtype.UUID) ([]
 }
 
 const updateComment = `-- name: UpdateComment :one
-UPDATE comments
-SET
-    update_time = NOW(),
-    content = $2
-WHERE id = $1
-RETURNING is_delete, create_time, update_time, id, user_id, post_id, content, reply_to
+WITH updated_comment AS (
+    UPDATE comments
+    SET
+        update_time = NOW(),
+        content = $2
+    WHERE comments.id = $1
+    RETURNING is_delete, create_time, update_time, id, user_id, post_id, content, reply_to
+)
+SELECT
+    updated_comment.is_delete, updated_comment.create_time, updated_comment.update_time, updated_comment.id, updated_comment.user_id, updated_comment.post_id, updated_comment.content, updated_comment.reply_to,
+    u.avatar,
+    u.username
+FROM updated_comment
+JOIN users AS u
+    ON updated_comment.user_id = u.id
 `
 
 type UpdateCommentParams struct {
@@ -118,9 +192,22 @@ type UpdateCommentParams struct {
 	Content string
 }
 
-func (q *Queries) UpdateComment(ctx context.Context, arg UpdateCommentParams) (Comment, error) {
+type UpdateCommentRow struct {
+	IsDelete   bool
+	CreateTime pgtype.Timestamp
+	UpdateTime pgtype.Timestamp
+	ID         pgtype.UUID
+	UserID     pgtype.UUID
+	PostID     pgtype.UUID
+	Content    string
+	ReplyTo    pgtype.UUID
+	Avatar     pgtype.Text
+	Username   string
+}
+
+func (q *Queries) UpdateComment(ctx context.Context, arg UpdateCommentParams) (UpdateCommentRow, error) {
 	row := q.db.QueryRow(ctx, updateComment, arg.ID, arg.Content)
-	var i Comment
+	var i UpdateCommentRow
 	err := row.Scan(
 		&i.IsDelete,
 		&i.CreateTime,
@@ -130,6 +217,8 @@ func (q *Queries) UpdateComment(ctx context.Context, arg UpdateCommentParams) (C
 		&i.PostID,
 		&i.Content,
 		&i.ReplyTo,
+		&i.Avatar,
+		&i.Username,
 	)
 	return i, err
 }

@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useState } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 import {
   Box,
   CircularProgress,
@@ -17,10 +17,14 @@ import type { Post } from "../models/post";
 import CommentEditor from "../components/shared/commentEditor";
 import type { Comment } from "../models/comment";
 import { useComments } from "../hooks/useComments";
+import { useLikes } from "../hooks/useLikes";
 import { useAuth } from "../contexts/authContext";
 import { commentReducer, initialState } from "../reducers/commentReducer";
 import CommentCard from "../components/shared/commentCard";
 import EditDeleteMenu from "../components/common/editDeleteMenu";
+import { endpoints } from "../utils/endpoints";
+import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
+import FavoriteIcon from "@mui/icons-material/Favorite";
 
 export default function Read() {
   const navigate = useNavigate();
@@ -34,15 +38,23 @@ export default function Read() {
   const [loading, setLoading] = useState(true);
 
   const { createComment, updateComment, deleteComment } = useComments();
+  const { likePost, unlikePost, getLikeStatus } = useLikes();
   const { user } = useAuth();
 
   const [state, dispatch] = useReducer(commentReducer, initialState);
+
+  const [likeCount, setLikeCount] = useState(0);
+  const [isLiked, setIsLiked] = useState(false);
 
   const [commentMenuAnchor, setCommentMenuAnchor] =
     useState<null | HTMLElement>(null);
 
   const [selectedComment, setSelectedComment] = useState<Comment | null>(null);
   const [editingComment, setEditingComment] = useState<Comment | null>(null);
+
+  const wsRef = useRef<WebSocket | null>(null);
+  const wsConnectedRef = useRef(false);
+  const hasFetchedRef = useRef(false);
 
   const handleCommentMenuOpen = (
     event: React.MouseEvent<HTMLElement>,
@@ -57,11 +69,15 @@ export default function Read() {
     setCommentMenuAnchor(null);
     setSelectedComment(null);
   };
+
   useEffect(() => {
     if (!postId) {
       setLoading(false);
       return;
     }
+
+    if (hasFetchedRef.current) return;
+    hasFetchedRef.current = true; // set BEFORE the async call
 
     const fetchPost = async () => {
       try {
@@ -71,6 +87,14 @@ export default function Read() {
         if (response) {
           setPost(response.post);
           dispatch({ type: "FETCH_SUCCESS", payload: response.comments });
+
+          // Fetch like status
+          getLikeStatus(postId!).then((data) => {
+            if (data.liked !== undefined) {
+              setIsLiked(data.liked);
+              setLikeCount(data.likeCount);
+            }
+          });
         }
       } catch (err) {
         console.error("Failed to get post:", err);
@@ -81,11 +105,52 @@ export default function Read() {
 
     fetchPost();
   }, [postId]);
+
+  useEffect(() => {
+    if (!postId || wsConnectedRef.current) return;
+
+    const wsUrl = endpoints.postHub(postId);
+    const ws = new WebSocket(wsUrl);
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      console.log("Connected to post hub");
+      wsConnectedRef.current = true;
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === "comment_created" && data.comment) {
+          dispatch({ type: "ADD_COMMENT", payload: data.comment });
+        } else if (data.type === "comment_updated" && data.comment) {
+          dispatch({ type: "UPDATE_COMMENT", payload: data.comment });
+        } else if (data.type === "comment_deleted" && data.commentId) {
+          dispatch({ type: "DELETE_COMMENT", payload: data.commentId });
+        }
+      } catch (err) {
+        console.error("Failed to parse websocket message:", err);
+      }
+    };
+
+    ws.onerror = (err) => {
+      console.error("WebSocket error:", err);
+    };
+
+    ws.onclose = () => {
+      console.log("Disconnected from post hub");
+      wsConnectedRef.current = false;
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, [postId]);
+
   const handleCreateComment = async (content: string) => {
     if (!postId) return;
     try {
-      const comment = await createComment(postId, content);
-      dispatch({ type: "ADD_COMMENT", payload: comment });
+      await createComment(postId, content);
     } catch (err) {
       console.error("Failed to create comment:", err);
     }
@@ -98,10 +163,7 @@ export default function Read() {
 
   const handleUpdateComment = async (ID: string, content: string) => {
     try {
-      const response = await updateComment(ID, content);
-
-      dispatch({ type: "UPDATE_COMMENT", payload: response });
-
+      await updateComment(ID, content);
       setSelectedComment(null);
     } catch (err) {
       console.error("Failed to update comment:", err);
@@ -110,13 +172,31 @@ export default function Read() {
 
   const handleDeleteComment = async (ID: string) => {
     try {
-      const response = await deleteComment(ID);
-
-      dispatch({ type: "DELETE_COMMENT", payload: response });
-
+      await deleteComment(ID);
       setSelectedComment(null);
     } catch (err) {
       console.error("Failed to delete comment:", err);
+    }
+  };
+
+  const handleLike = async () => {
+    if (!postId) return;
+    if (isLiked) {
+      try {
+        await unlikePost(postId);
+        setIsLiked(false);
+        setLikeCount((prev) => prev - 1);
+      } catch (err) {
+        console.error("Failed to unlike post:", err);
+      }
+    } else {
+      try {
+        await likePost(postId);
+        setIsLiked(true);
+        setLikeCount((prev) => prev + 1);
+      } catch (err) {
+        console.error("Failed to like post:", err);
+      }
     }
   };
   if (loading) {
@@ -216,6 +296,21 @@ export default function Read() {
               backgroundColor: "#313244",
             }}
           />
+
+          <IconButton
+            sx={{
+              color: isLiked ? "#f38ba8" : "#a6adc8",
+              "&:hover": {
+                backgroundColor: "#313244",
+              },
+            }}
+            onClick={handleLike}
+          >
+            {isLiked ? <FavoriteIcon fontSize="small" /> : <FavoriteBorderIcon fontSize="small" />}
+          </IconButton>
+          <Typography variant="body2" sx={{ color: "#a6adc8", ml: 0.5 }}>
+            {likeCount}
+          </Typography>
 
           {post.UpdateTime && (
             <Typography variant="caption" sx={{ color: "#6c7086" }}>
@@ -335,7 +430,7 @@ export default function Read() {
                   <CommentCard
                     key={comment.ID}
                     comment={comment}
-                    user={user}
+                    currentUser={user}
                     onMenuOpen={handleCommentMenuOpen}
                   />
                 </Card>
@@ -376,12 +471,13 @@ export default function Read() {
               content={editingComment?.Content ?? ""}
               onSubmit={async (content) => {
                 if (editingComment) {
-                  handleUpdateComment(editingComment.ID, content);
+                  await handleUpdateComment(editingComment.ID, content);
+                  setEditingComment(null);
                 } else {
                   handleCreateComment(content);
                 }
               }}
-              onCancel={() => {}}
+              onCancel={() => setEditingComment(null)}
             />
           </Box>
         </Box>

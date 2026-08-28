@@ -7,4 +7,6 @@ export type Comment = {
   Createtime: string;
   IsDelete: boolean;
   ReplyTo: string | null;
+  Avatar: string | null;
+  Username: string;
 };

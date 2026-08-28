@@ -10,15 +10,17 @@ import {
 } from "@mui/material";
 
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
+import FavoriteIcon from "@mui/icons-material/Favorite";
 import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutlined";
 import RepeatIcon from "@mui/icons-material/Repeat";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useEditor } from "@tiptap/react";
 
 import CommentEditor from "./commentEditor";
 import { useComments } from "../../hooks/useComments";
+import { useLikes } from "../../hooks/useLikes";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import EditDeleteMenu from "../common/editDeleteMenu";
 import { commentEditorExtensions } from "../common/commentEditorExtensions";
@@ -59,6 +61,41 @@ export default function PostCard({
   const statusInfo = statusMap[status as keyof typeof statusMap];
   const { catppuccin } = useAppTheme();
   const navigate = useNavigate();
+
+  const { likePost, unlikePost, getLikeStatus } = useLikes();
+  const [likeCount, setLikeCount] = useState(likes);
+  const [isLiked, setIsLiked] = useState(false);
+
+  useEffect(() => {
+    if (status !== 1) {
+      getLikeStatus(id).then((data) => {
+        if (data.liked !== undefined) {
+          setIsLiked(data.liked);
+          setLikeCount(data.likeCount);
+        }
+      });
+    }
+  }, [id]);
+
+  const handleLike = async () => {
+    if (isLiked) {
+      try {
+        await unlikePost(id);
+        setIsLiked(false);
+        setLikeCount((prev) => prev - 1);
+      } catch (err) {
+        console.error("Failed to unlike post:", err);
+      }
+    } else {
+      try {
+        await likePost(id);
+        setIsLiked(true);
+        setLikeCount((prev) => prev + 1);
+      } catch (err) {
+        console.error("Failed to like post:", err);
+      }
+    }
+  };
 
   const handleCardClick = () => {
     if (onClick) {
@@ -281,25 +318,24 @@ export default function PostCard({
                   color: "#a6adc8",
                 }}
               >
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 0.5,
-                  }}
-                >
-                  <FavoriteBorderIcon fontSize="small" />
-
-                  <Typography variant="body2">{likes}</Typography>
-                </Box>
-
                 <IconButton
                   sx={{
                     display: "flex",
                     alignItems: "center",
                     gap: 0.5,
-                    color: "#a6adc8",
+                    color: isLiked ? "#f38ba8" : "#a6adc8",
                   }}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    handleLike();
+                  }}
+                >
+                  {isLiked ? <FavoriteIcon fontSize="small" /> : <FavoriteBorderIcon fontSize="small" />}
+
+                  <Typography variant="body2">{likeCount}</Typography>
+                </IconButton>
+
+                <IconButton
                   onClick={(event) => {
                     event.stopPropagation();
                     handleOpen();

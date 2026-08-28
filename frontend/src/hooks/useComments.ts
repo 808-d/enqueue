@@ -41,7 +41,7 @@ export function useComments() {
   }
 
   async function deleteComment(id: string) {
-    const response = await axios.patch(`${endpoints.comments}/${id}`, {
+    const response = await axios.patch(`${endpoints.comments}/${id}`, null, {
       withCredentials: true,
     });
     return response.data;

@@ -1,5 +1,4 @@
 import { useEffect } from "react";
-
 import { Box, Button, IconButton, Stack, Tooltip } from "@mui/material";
 
 import FormatBoldIcon from "@mui/icons-material/FormatBold";
@@ -31,12 +30,11 @@ export default function CommentEditor({
   const editor = useEditor({
     extensions: commentEditorExtensions,
 
-    content: "",
+    content: content ?? "",
   });
 
   useEffect(() => {
     if (!editor) return;
-
     editor.commands.setContent(content ?? "");
   }, [content, editor]);
 
@@ -276,7 +274,7 @@ export default function CommentEditor({
         <Button
           variant="contained"
           onClick={handleSubmit}
-          disabled={editor.isEmpty}
+          // disabled={editor.getText().trim().length === 0}
           sx={{
             backgroundColor: catppuccin.mauve,
             color: catppuccin.base,

@@ -89,7 +89,7 @@ func (s *PostService) GetPostsByUser(ctx context.Context, userId uuid.UUID) ([]d
 	}
 	return posts, err
 }
-func (s *PostService) GetPostById(ctx context.Context, postId uuid.UUID) (database.Post, []database.Comment, error) {
+func (s *PostService) GetPostById(ctx context.Context, postId uuid.UUID) (database.Post, []database.GetCommentsByPostRow, error) {
 	post, err := s.repo.GetPostById(ctx, pgtype.UUID{
 		Bytes: postId,
 		Valid: true,

@@ -6,4 +6,4 @@ export type CommentAction =
   | { type: "FETCH_ERROR"; payload: string }
   | { type: "ADD_COMMENT"; payload: Comment }
   | { type: "UPDATE_COMMENT"; payload: Comment }
-  | { type: "DELETE_COMMENT"; payload: { ID: string } };
+  | { type: "DELETE_COMMENT"; payload: string };
