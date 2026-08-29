@@ -1,14 +1,15 @@
-import { useEffect, useReducer, useRef, useState } from "react";
+import { useEffect, useReducer, useRef, useState, useCallback } from "react";
 import {
   Box,
+  Button,
   CircularProgress,
   Container,
-  Typography,
-  Chip,
   Divider,
   IconButton,
   Stack,
+  Typography,
   Card,
+  Chip,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -31,7 +32,6 @@ export default function Read() {
   const [searchParams] = useSearchParams();
 
   const postId = searchParams.get("id");
-
   const { getPostById } = usePosts();
 
   const [post, setPost] = useState<Post | null>(null);
@@ -40,7 +40,7 @@ export default function Read() {
   const { createComment, updateComment, deleteComment } = useComments();
   const { likePost, unlikePost, getLikeStatus } = useLikes();
   const { user } = useAuth();
-
+  const { getComments } = useComments();
   const [state, dispatch] = useReducer(commentReducer, initialState);
 
   const [likeCount, setLikeCount] = useState(0);
@@ -51,6 +51,10 @@ export default function Read() {
 
   const [selectedComment, setSelectedComment] = useState<Comment | null>(null);
   const [editingComment, setEditingComment] = useState<Comment | null>(null);
+
+  const [commentPage, setCommentPage] = useState(1);
+  const [commentTotalPages, setCommentTotalPages] = useState(1);
+  const [commentsLoading, setCommentsLoading] = useState(false);
 
   const wsRef = useRef<WebSocket | null>(null);
   const wsConnectedRef = useRef(false);
@@ -71,7 +75,7 @@ export default function Read() {
   };
 
   useEffect(() => {
-    if (!postId) {
+    if (postId === undefined || postId === null || postId === "") {
       setLoading(false);
       return;
     }
@@ -86,7 +90,12 @@ export default function Read() {
 
         if (response) {
           setPost(response.post);
-          dispatch({ type: "FETCH_SUCCESS", payload: response.comments });
+
+          // Fetch first page of comments with pagination info
+          const commentsResult = await getComments(postId, 1, 10);
+          dispatch({ type: "FETCH_SUCCESS", payload: commentsResult.comments });
+          setCommentPage(commentsResult.currentPage);
+          setCommentTotalPages(commentsResult.totalPages);
 
           // Fetch like status
           getLikeStatus(postId!).then((data) => {
@@ -199,6 +208,33 @@ export default function Read() {
       }
     }
   };
+
+  const goToPage = useCallback(
+    async (page: number) => {
+      if (
+        postId === undefined ||
+        postId === null ||
+        postId === "" ||
+        commentsLoading ||
+        page < 1 ||
+        page > commentTotalPages
+      )
+        return;
+      setCommentsLoading(true);
+      try {
+        const result = await getComments(postId, page, 10);
+        dispatch({ type: "FETCH_SUCCESS", payload: result.comments });
+        setCommentPage(result.currentPage);
+        setCommentTotalPages(result.totalPages);
+      } catch (err) {
+        console.error("Failed to load comments:", err);
+      } finally {
+        setCommentsLoading(false);
+      }
+    },
+    [postId, getComments, commentsLoading, commentTotalPages],
+  );
+
   if (loading) {
     return (
       <Box
@@ -262,11 +298,11 @@ export default function Read() {
             mb: 1.5,
           }}
         >
-          {post.Title || "No Title"}
+          {post.title || "No Title"}
         </Typography>
 
         {/* Description */}
-        {post.Description && (
+        {post.description && (
           <Typography
             variant="h6"
             sx={{
@@ -275,7 +311,7 @@ export default function Read() {
               mb: 2,
             }}
           >
-            {post.Description}
+            {post.description}
           </Typography>
         )}
 
@@ -306,15 +342,19 @@ export default function Read() {
             }}
             onClick={handleLike}
           >
-            {isLiked ? <FavoriteIcon fontSize="small" /> : <FavoriteBorderIcon fontSize="small" />}
+            {isLiked ? (
+              <FavoriteIcon fontSize="small" />
+            ) : (
+              <FavoriteBorderIcon fontSize="small" />
+            )}
           </IconButton>
           <Typography variant="body2" sx={{ color: "#a6adc8", ml: 0.5 }}>
             {likeCount}
           </Typography>
 
-          {post.UpdateTime && (
+          {post.updateTime && (
             <Typography variant="caption" sx={{ color: "#6c7086" }}>
-              Updated {post.UpdateTime}
+              Updated {post.updateTime}
             </Typography>
           )}
         </Box>
@@ -382,7 +422,7 @@ export default function Read() {
             },
           }}
           dangerouslySetInnerHTML={{
-            __html: post.Content ?? "",
+            __html: post.content ?? "",
           }}
         />
         <Divider
@@ -407,7 +447,7 @@ export default function Read() {
 
           {/* Existing comments */}
           <Stack spacing={2}>
-            {state.comments.length === 0 ? (
+            {(state?.comments?.length ?? 0) === 0 ? (
               <Typography
                 variant="body2"
                 sx={{
@@ -419,7 +459,7 @@ export default function Read() {
             ) : (
               state.comments.map((comment) => (
                 <Card
-                  key={comment.ID}
+                  key={comment.id}
                   sx={{
                     backgroundColor: "#313244",
                     border: "1px solid #45475a",
@@ -428,7 +468,7 @@ export default function Read() {
                   }}
                 >
                   <CommentCard
-                    key={comment.ID}
+                    key={comment.id}
                     comment={comment}
                     currentUser={user}
                     onMenuOpen={handleCommentMenuOpen}
@@ -447,13 +487,61 @@ export default function Read() {
               }}
               onDelete={() => {
                 if (selectedComment) {
-                  handleDeleteComment(selectedComment.ID);
+                  handleDeleteComment(selectedComment.id);
                 }
 
                 handleCommentMenuClose();
               }}
             />
           </Stack>
+
+          {commentTotalPages > 1 && (
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "center",
+                mt: 2,
+                gap: 1,
+                flexWrap: "wrap",
+              }}
+            >
+              <Button
+                variant={commentPage === 1 ? "contained" : "outlined"}
+                onClick={() => goToPage(commentPage - 1)}
+                disabled={commentsLoading || commentPage === 1}
+                sx={{ color: "#cdd6f4", borderColor: "#45475a", minWidth: 80 }}
+              >
+                Previous
+              </Button>
+              {Array.from({ length: commentTotalPages }, (_, i) => i + 1).map(
+                (pageNum) => (
+                  <Button
+                    key={pageNum}
+                    variant={commentPage === pageNum ? "contained" : "outlined"}
+                    onClick={() => goToPage(pageNum)}
+                    disabled={commentsLoading || commentPage === pageNum}
+                    sx={{
+                      color: "#cdd6f4",
+                      borderColor: "#45475a",
+                      minWidth: 40,
+                    }}
+                  >
+                    {pageNum}
+                  </Button>
+                ),
+              )}
+              <Button
+                variant={
+                  commentPage === commentTotalPages ? "contained" : "outlined"
+                }
+                onClick={() => goToPage(commentPage + 1)}
+                disabled={commentsLoading || commentPage === commentTotalPages}
+                sx={{ color: "#cdd6f4", borderColor: "#45475a", minWidth: 80 }}
+              >
+                Next
+              </Button>
+            </Box>
+          )}
 
           {/* New comment */}
           <Box sx={{ mt: 4 }}>
@@ -468,10 +556,10 @@ export default function Read() {
             </Typography>
 
             <CommentEditor
-              content={editingComment?.Content ?? ""}
+              content={editingComment?.content ?? ""}
               onSubmit={async (content) => {
                 if (editingComment) {
-                  await handleUpdateComment(editingComment.ID, content);
+                  await handleUpdateComment(editingComment.id, content);
                   setEditingComment(null);
                 } else {
                   handleCreateComment(content);

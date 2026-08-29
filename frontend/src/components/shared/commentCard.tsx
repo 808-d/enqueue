@@ -1,4 +1,11 @@
-import { Box, Card, CardContent, IconButton, Stack, Typography } from "@mui/material";
+import {
+  Box,
+  Card,
+  CardContent,
+  IconButton,
+  Stack,
+  Typography,
+} from "@mui/material";
 
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import type { Comment } from "../../models/comment";
@@ -16,7 +23,7 @@ export default function CommentCard({
   currentUser,
   onMenuOpen,
 }: CommentCardProps) {
-  const isOwner = comment.UserID === currentUser?.id;
+  const isOwner = comment.userId === currentUser?.id;
 
   return (
     <Card
@@ -49,7 +56,11 @@ export default function CommentCard({
                 gap: 1,
               }}
             >
-              <Avatar username={comment.Username} avatar={comment.Avatar} size={32} />
+              <Avatar
+                username={comment.username}
+                avatar={comment.avatar}
+                size={32}
+              />
 
               <Typography
                 variant="subtitle2"
@@ -59,7 +70,7 @@ export default function CommentCard({
                   textAlign: "left",
                 }}
               >
-                {comment.Username ?? "Unknown user"}
+                {comment.username ?? "Unknown user"}
               </Typography>
             </Box>
 
@@ -99,7 +110,7 @@ export default function CommentCard({
               },
             }}
             dangerouslySetInnerHTML={{
-              __html: comment.Content ?? "",
+              __html: comment.content ?? "",
             }}
           />
 
@@ -111,7 +122,9 @@ export default function CommentCard({
               textAlign: "left",
             }}
           >
-            {comment.Createtime}
+            {comment.createTime
+              ? new Date(comment.createTime * 1000).toLocaleString()
+              : ""}
           </Typography>
         </Stack>
       </CardContent>

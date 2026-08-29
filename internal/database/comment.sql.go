@@ -11,6 +11,18 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countCommentsByPost = `-- name: CountCommentsByPost :one
+SELECT COUNT(*) FROM comments
+WHERE post_id = $1 AND is_delete = false
+`
+
+func (q *Queries) CountCommentsByPost(ctx context.Context, postID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countCommentsByPost, postID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createComment = `-- name: CreateComment :one
 WITH new_comment AS (
     INSERT INTO comments
@@ -29,23 +41,23 @@ INNER JOIN users u
 `
 
 type CreateCommentParams struct {
-	UserID  pgtype.UUID
-	PostID  pgtype.UUID
-	Content string
-	ReplyTo pgtype.UUID
+	UserID  pgtype.UUID `json:"userId"`
+	PostID  pgtype.UUID `json:"postId"`
+	Content string      `json:"content"`
+	ReplyTo pgtype.UUID `json:"replyTo"`
 }
 
 type CreateCommentRow struct {
-	IsDelete   bool
-	CreateTime pgtype.Timestamp
-	UpdateTime pgtype.Timestamp
-	ID         pgtype.UUID
-	UserID     pgtype.UUID
-	PostID     pgtype.UUID
-	Content    string
-	ReplyTo    pgtype.UUID
-	Avatar     pgtype.Text
-	Username   string
+	IsDelete   bool             `json:"isDelete"`
+	CreateTime pgtype.Timestamp `json:"createTime"`
+	UpdateTime pgtype.Timestamp `json:"updateTime"`
+	ID         pgtype.UUID      `json:"id"`
+	UserID     pgtype.UUID      `json:"userId"`
+	PostID     pgtype.UUID      `json:"postId"`
+	Content    string           `json:"content"`
+	ReplyTo    pgtype.UUID      `json:"replyTo"`
+	Avatar     pgtype.Text      `json:"avatar"`
+	Username   string           `json:"username"`
 }
 
 func (q *Queries) CreateComment(ctx context.Context, arg CreateCommentParams) (CreateCommentRow, error) {
@@ -88,16 +100,16 @@ JOIN users AS u
 `
 
 type DeleteCommentRow struct {
-	IsDelete   bool
-	CreateTime pgtype.Timestamp
-	UpdateTime pgtype.Timestamp
-	ID         pgtype.UUID
-	UserID     pgtype.UUID
-	PostID     pgtype.UUID
-	Content    string
-	ReplyTo    pgtype.UUID
-	Avatar     pgtype.Text
-	Username   string
+	IsDelete   bool             `json:"isDelete"`
+	CreateTime pgtype.Timestamp `json:"createTime"`
+	UpdateTime pgtype.Timestamp `json:"updateTime"`
+	ID         pgtype.UUID      `json:"id"`
+	UserID     pgtype.UUID      `json:"userId"`
+	PostID     pgtype.UUID      `json:"postId"`
+	Content    string           `json:"content"`
+	ReplyTo    pgtype.UUID      `json:"replyTo"`
+	Avatar     pgtype.Text      `json:"avatar"`
+	Username   string           `json:"username"`
 }
 
 func (q *Queries) DeleteComment(ctx context.Context, id pgtype.UUID) (DeleteCommentRow, error) {
@@ -119,27 +131,46 @@ func (q *Queries) DeleteComment(ctx context.Context, id pgtype.UUID) (DeleteComm
 }
 
 const getCommentsByPost = `-- name: GetCommentsByPost :many
-select c.is_delete, c.create_time, c.update_time, c.id, c.user_id, c.post_id, c.content, c.reply_to,u.avatar ,u.username  from comments c
-inner join users U
-on c.user_id = u.id
-where C.post_id  = $1 and c.is_delete = false
+SELECT
+    c.is_delete,
+    c.update_time,
+    c.id,
+    c.user_id,
+    c.post_id,
+    c.content,
+    c.reply_to,
+    u.avatar,
+    u.username,
+    EXTRACT(EPOCH FROM c.create_time)::bigint AS create_time
+FROM comments c
+INNER JOIN users u ON c.user_id = u.id
+WHERE c.post_id = $1
+  AND c.is_delete = false
+ORDER BY c.create_time DESC, c.id DESC
+LIMIT $2 OFFSET $3
 `
 
-type GetCommentsByPostRow struct {
-	IsDelete   bool
-	CreateTime pgtype.Timestamp
-	UpdateTime pgtype.Timestamp
-	ID         pgtype.UUID
-	UserID     pgtype.UUID
-	PostID     pgtype.UUID
-	Content    string
-	ReplyTo    pgtype.UUID
-	Avatar     pgtype.Text
-	Username   string
+type GetCommentsByPostParams struct {
+	PostID pgtype.UUID `json:"postId"`
+	Limit  int32       `json:"limit"`
+	Offset int32       `json:"offset"`
 }
 
-func (q *Queries) GetCommentsByPost(ctx context.Context, postID pgtype.UUID) ([]GetCommentsByPostRow, error) {
-	rows, err := q.db.Query(ctx, getCommentsByPost, postID)
+type GetCommentsByPostRow struct {
+	IsDelete   bool             `json:"isDelete"`
+	UpdateTime pgtype.Timestamp `json:"updateTime"`
+	ID         pgtype.UUID      `json:"id"`
+	UserID     pgtype.UUID      `json:"userId"`
+	PostID     pgtype.UUID      `json:"postId"`
+	Content    string           `json:"content"`
+	ReplyTo    pgtype.UUID      `json:"replyTo"`
+	Avatar     pgtype.Text      `json:"avatar"`
+	Username   string           `json:"username"`
+	CreateTime int64            `json:"createTime"`
+}
+
+func (q *Queries) GetCommentsByPost(ctx context.Context, arg GetCommentsByPostParams) ([]GetCommentsByPostRow, error) {
+	rows, err := q.db.Query(ctx, getCommentsByPost, arg.PostID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +180,6 @@ func (q *Queries) GetCommentsByPost(ctx context.Context, postID pgtype.UUID) ([]
 		var i GetCommentsByPostRow
 		if err := rows.Scan(
 			&i.IsDelete,
-			&i.CreateTime,
 			&i.UpdateTime,
 			&i.ID,
 			&i.UserID,
@@ -158,6 +188,7 @@ func (q *Queries) GetCommentsByPost(ctx context.Context, postID pgtype.UUID) ([]
 			&i.ReplyTo,
 			&i.Avatar,
 			&i.Username,
+			&i.CreateTime,
 		); err != nil {
 			return nil, err
 		}
@@ -188,21 +219,21 @@ JOIN users AS u
 `
 
 type UpdateCommentParams struct {
-	ID      pgtype.UUID
-	Content string
+	ID      pgtype.UUID `json:"id"`
+	Content string      `json:"content"`
 }
 
 type UpdateCommentRow struct {
-	IsDelete   bool
-	CreateTime pgtype.Timestamp
-	UpdateTime pgtype.Timestamp
-	ID         pgtype.UUID
-	UserID     pgtype.UUID
-	PostID     pgtype.UUID
-	Content    string
-	ReplyTo    pgtype.UUID
-	Avatar     pgtype.Text
-	Username   string
+	IsDelete   bool             `json:"isDelete"`
+	CreateTime pgtype.Timestamp `json:"createTime"`
+	UpdateTime pgtype.Timestamp `json:"updateTime"`
+	ID         pgtype.UUID      `json:"id"`
+	UserID     pgtype.UUID      `json:"userId"`
+	PostID     pgtype.UUID      `json:"postId"`
+	Content    string           `json:"content"`
+	ReplyTo    pgtype.UUID      `json:"replyTo"`
+	Avatar     pgtype.Text      `json:"avatar"`
+	Username   string           `json:"username"`
 }
 
 func (q *Queries) UpdateComment(ctx context.Context, arg UpdateCommentParams) (UpdateCommentRow, error) {

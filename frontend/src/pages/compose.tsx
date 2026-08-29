@@ -224,7 +224,7 @@ const Compose = () => {
 
         if (response?.post) {
           setPost(response.post);
-          setTitle(response.post.Title ?? "No title");
+          setTitle(response.post.title ?? "No title");
         }
       } catch (err) {
         if (cancelled) return;

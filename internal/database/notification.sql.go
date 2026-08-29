@@ -30,10 +30,10 @@ RETURNING id, recipient_id, actor_id, type, entity_id, read_at, create_time
 `
 
 type CreateNotificationParams struct {
-	RecipientID pgtype.UUID
-	ActorID     pgtype.UUID
-	Type        string
-	EntityID    pgtype.UUID
+	RecipientID pgtype.UUID `json:"recipientId"`
+	ActorID     pgtype.UUID `json:"actorId"`
+	Type        string      `json:"type"`
+	EntityID    pgtype.UUID `json:"entityId"`
 }
 
 func (q *Queries) CreateNotification(ctx context.Context, arg CreateNotificationParams) (Notification, error) {
@@ -83,8 +83,8 @@ LIMIT $2
 `
 
 type ListNotificationsParams struct {
-	RecipientID pgtype.UUID
-	Limit       int32
+	RecipientID pgtype.UUID `json:"recipientId"`
+	Limit       int32       `json:"limit"`
 }
 
 func (q *Queries) ListNotifications(ctx context.Context, arg ListNotificationsParams) ([]Notification, error) {

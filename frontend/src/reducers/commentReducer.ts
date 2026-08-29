@@ -17,7 +17,7 @@ export function commentReducer(
       return {
         ...state,
         loading: false,
-        comments: action.payload,
+        comments: Array.isArray(action.payload) ? action.payload : [],
       };
 
     case "ADD_COMMENT":

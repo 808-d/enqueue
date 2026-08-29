@@ -2,6 +2,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { endpoints } from "../utils/endpoints";
 import type { PostData } from "../models/postData";
+import type { FeedPost } from "../models/post";
 
 export function usePosts() {
   const navigate = useNavigate();
@@ -10,6 +11,19 @@ export function usePosts() {
     return await axios.get(`${endpoints.posts}/user/${userId}`, {
       withCredentials: true,
     });
+  }
+
+  async function getPosts(cursorTime?: string, cursorId?: string, limit = 20): Promise<FeedPost[]> {
+    const params = new URLSearchParams();
+    if (cursorTime) params.append("cursor_time", cursorTime);
+    if (cursorId) params.append("cursor_id", cursorId);
+    params.append("limit", limit.toString());
+
+    const response = await axios.get<FeedPost[]>(`${endpoints.posts}?${params.toString()}`, {
+      withCredentials: true,
+    });
+
+    return response.data;
   }
 
   async function getPostById(id: string): Promise<PostData> {
@@ -72,6 +86,7 @@ export function usePosts() {
 
   return {
     getPostsByUser,
+    getPosts,
     updatePostStatus,
     createPost,
     updatePost,

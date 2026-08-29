@@ -6,6 +6,7 @@ import (
 	"enqueue/internal/services"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/google/uuid"
 )
@@ -77,4 +78,35 @@ func (h *CommentsHandler) DeleteComment(w http.ResponseWriter, r *http.Request) 
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(comment)
+}
+
+func (h *CommentsHandler) GetCommentsByPost(w http.ResponseWriter, r *http.Request) {
+	postId, err := uuid.Parse(r.PathValue("postId"))
+	if err != nil {
+		http.Error(w, "invalid post id", http.StatusBadRequest)
+		return
+	}
+
+	page := 1
+	if pageStr := r.URL.Query().Get("page"); pageStr != "" {
+		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+			page = p
+		}
+	}
+
+	pageSize := 10
+	if sizeStr := r.URL.Query().Get("page_size"); sizeStr != "" {
+		if s, err := strconv.Atoi(sizeStr); err == nil && s > 0 && s <= 100 {
+			pageSize = s
+		}
+	}
+
+	result, err := h.commentService.GetCommentsByPost(r.Context(), postId, page, pageSize)
+	if err != nil {
+		http.Error(w, "failed to get comments", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
 }

@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"enqueue/internal/database"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -16,6 +17,24 @@ type PostService struct {
 
 func NewPostService(pool *pgxpool.Pool) *PostService {
 	return &PostService{repo: database.New(pool), db: pool}
+}
+
+func (s *PostService) GetPosts(ctx context.Context, cursorTime *time.Time, cursorID *uuid.UUID, limit int32) ([]database.GetPostsRow, error) {
+	var timestamp pgtype.Timestamptz
+	var id pgtype.UUID
+
+	if cursorTime != nil {
+		timestamp = pgtype.Timestamptz{Time: *cursorTime, Valid: true}
+	}
+	if cursorID != nil {
+		id = pgtype.UUID{Bytes: *cursorID, Valid: true}
+	}
+
+	return s.repo.GetPosts(ctx, database.GetPostsParams{
+		Column1: timestamp,
+		Column2: id,
+		Limit:   limit,
+	})
 }
 
 func (s *PostService) CreatePost(
@@ -98,9 +117,9 @@ func (s *PostService) GetPostById(ctx context.Context, postId uuid.UUID) (databa
 		return database.Post{}, nil, err
 	}
 
-	comments, err := s.repo.GetCommentsByPost(ctx, pgtype.UUID{
-		Bytes: postId,
-		Valid: true,
+	comments, err := s.repo.GetCommentsByPost(ctx, database.GetCommentsByPostParams{
+		PostID: pgtype.UUID{Bytes: postId, Valid: true},
+		Limit:  20,
 	})
 	return post, comments, err
 }

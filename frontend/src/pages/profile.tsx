@@ -134,9 +134,9 @@ export function Profile() {
 
   const postsByStatus = useMemo(() => {
     return {
-      drafts: posts.filter((post) => post.Status === 1),
-      published: posts.filter((post) => post.Status === 2),
-      hidden: posts.filter((post) => post.Status === 3),
+      drafts: posts.filter((post) => post.status === 1),
+      published: posts.filter((post) => post.status === 2),
+      hidden: posts.filter((post) => post.status === 3),
     };
   }, [posts]);
   if (!user) {
@@ -524,14 +524,14 @@ export function Profile() {
                     )}
                     {postsByStatus.published.map((post) => (
                       <PostCard
-                        key={post.ID}
-                        id={post.ID}
-                        title={post.Title || "No title"}
-                        description={post.Description}
-                        status={post.Status}
-                        updatedAt={post.UpdateTime}
-                        onClick={() => navigate(`/read?id=${post.ID}`)}
-                        onDelete={() => updatePostStatus(post.ID)}
+                        key={post.id}
+                        id={post.id}
+                        title={post.title || "No title"}
+                        description={post.description}
+                        status={post.status}
+                        updatedAt={post.updateTime}
+                        onClick={() => navigate(`/read?id=${post.id}`)}
+                        onDelete={() => updatePostStatus(post.id)}
                       />
                     ))}
                   </Box>
@@ -580,12 +580,12 @@ export function Profile() {
                     )}
                     {postsByStatus.drafts.map((post) => (
                       <PostCard
-                        key={post.ID}
-                        id={post.ID}
-                        title={(post.Title ??= "No title")}
-                        description={post.Description}
-                        status={post.Status}
-                        updatedAt={post.UpdateTime}
+                        key={post.id}
+                        id={post.id}
+                        title={(post.title ?? "No title")}
+                        description={post.description}
+                        status={post.status}
+                        updatedAt={post.updateTime}
                         onDelete={(id) => updatePostStatus(id)}
                       />
                     ))}

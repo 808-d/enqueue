@@ -32,8 +32,8 @@ WHERE user_id = $1
 `
 
 type DeleteLikeParams struct {
-	UserID pgtype.UUID
-	PostID pgtype.UUID
+	UserID pgtype.UUID `json:"userId"`
+	PostID pgtype.UUID `json:"postId"`
 }
 
 func (q *Queries) DeleteLike(ctx context.Context, arg DeleteLikeParams) (Like, error) {
@@ -51,8 +51,8 @@ WHERE user_id = $1
 `
 
 type GetLikeParams struct {
-	UserID pgtype.UUID
-	PostID pgtype.UUID
+	UserID pgtype.UUID `json:"userId"`
+	PostID pgtype.UUID `json:"postId"`
 }
 
 func (q *Queries) GetLike(ctx context.Context, arg GetLikeParams) (Like, error) {
@@ -70,8 +70,8 @@ VALUES($1, $2, now())
 `
 
 type LikeParams struct {
-	UserID pgtype.UUID
-	PostID pgtype.UUID
+	UserID pgtype.UUID `json:"userId"`
+	PostID pgtype.UUID `json:"postId"`
 }
 
 func (q *Queries) Like(ctx context.Context, arg LikeParams) (Like, error) {

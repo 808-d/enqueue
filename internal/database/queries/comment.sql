@@ -47,7 +47,24 @@ JOIN users AS u
     ON deleted_comment.user_id = u.id;
 
 -- name: GetCommentsByPost :many
-select c.*,u.avatar ,u.username  from comments c
-inner join users U
-on c.user_id = u.id
-where C.post_id  = $1 and c.is_delete = false;
+SELECT
+    c.is_delete,
+    c.update_time,
+    c.id,
+    c.user_id,
+    c.post_id,
+    c.content,
+    c.reply_to,
+    u.avatar,
+    u.username,
+    EXTRACT(EPOCH FROM c.create_time)::bigint AS create_time
+FROM comments c
+INNER JOIN users u ON c.user_id = u.id
+WHERE c.post_id = $1
+  AND c.is_delete = false
+ORDER BY c.create_time DESC, c.id DESC
+LIMIT $2 OFFSET $3;
+
+-- name: CountCommentsByPost :one
+SELECT COUNT(*) FROM comments
+WHERE post_id = $1 AND is_delete = false;

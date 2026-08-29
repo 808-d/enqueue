@@ -37,8 +37,8 @@ func (h *LikeHandler) LikePost(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]any{
-		"liked":      true,
-		"likeCount":  like.UserID, // placeholder, will get actual count
+		"liked":     true,
+		"likeCount": like.UserID, // placeholder, will get actual count
 	})
 }
 
@@ -69,10 +69,6 @@ func (h *LikeHandler) UnlikePost(w http.ResponseWriter, r *http.Request) {
 
 func (h *LikeHandler) GetLikeStatus(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value("id").(uuid.UUID)
-	if !ok {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
-		return
-	}
 
 	postID, err := uuid.Parse(r.PathValue("postId"))
 	if err != nil {
@@ -80,12 +76,15 @@ func (h *LikeHandler) GetLikeStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hasLiked, _ := h.likeService.HasUserLiked(r.Context(), userID, postID)
+	var hasLiked bool
+	if ok {
+		hasLiked, _ = h.likeService.HasUserLiked(r.Context(), userID, postID)
+	}
 	count, _ := h.likeService.GetLikeCount(r.Context(), postID)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]any{
-		"liked":      hasLiked,
-		"likeCount":  count,
+		"liked":     hasLiked,
+		"likeCount": count,
 	})
 }

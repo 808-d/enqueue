@@ -18,7 +18,7 @@ func RegisterUserRoutes(mux *http.ServeMux, h *UsersHandler) {
 func RegisterLikeRoutes(mux *http.ServeMux, h *LikeHandler) {
 	mux.Handle("POST /posts/like/{postId}", middlewares.AuthMiddleware(http.HandlerFunc(h.LikePost)))
 	mux.Handle("DELETE /posts/like/{postId}", middlewares.AuthMiddleware(http.HandlerFunc(h.UnlikePost)))
-	mux.Handle("GET /posts/like/{postId}", middlewares.AuthMiddleware(http.HandlerFunc(h.GetLikeStatus)))
+	mux.HandleFunc("GET /posts/like/{postId}", h.GetLikeStatus)
 }
 
 func RegisterPostRoutes(mux *http.ServeMux, h *PostsHandler) {
@@ -40,10 +40,10 @@ func RegisterAuthRoutes(mux *http.ServeMux, h *AuthHandler) {
 	mux.HandleFunc("POST /logout", h.Logout)
 }
 func RegisterCommentsRoutes(mux *http.ServeMux, h *CommentsHandler) {
-	// mux.HandleFunc("GET /comments", h.Login)
 	mux.Handle("POST /comments", middlewares.AuthMiddleware(http.HandlerFunc(h.CreateComment)))
 	mux.Handle("PATCH /comments", middlewares.AuthMiddleware(http.HandlerFunc(h.UpdateComment)))
 	mux.Handle("PATCH /comments/{id}", middlewares.AuthMiddleware(http.HandlerFunc(h.DeleteComment)))
+	mux.HandleFunc("GET /comments/post/{postId}", h.GetCommentsByPost)
 }
 
 func RegisterFollowRoutes(mux *http.ServeMux, h *FollowsHandler) {

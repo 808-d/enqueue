@@ -107,9 +107,45 @@ func (s *CommentService) DeleteComment(ctx context.Context, id uuid.UUID) (datab
 	return comment, nil
 }
 
-func (s *CommentService) GetCommentsByPost(ctx context.Context, id uuid.UUID) ([]database.GetCommentsByPostRow, error) {
-	return s.repo.GetCommentsByPost(ctx, pgtype.UUID{
-		Bytes: id,
-		Valid: true,
+type CommentsPageResult struct {
+	Comments    []database.GetCommentsByPostRow `json:"comments"`
+	TotalCount  int64                          `json:"totalCount"`
+	TotalPages  int                            `json:"totalPages"`
+	CurrentPage int                            `json:"currentPage"`
+	PageSize    int                            `json:"pageSize"`
+}
+
+func (s *CommentService) GetCommentsByPost(ctx context.Context, postID uuid.UUID, page int, pageSize int) (CommentsPageResult, error) {
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 100 {
+		pageSize = 20
+	}
+
+	offset := (page - 1) * pageSize
+
+	totalCount, err := s.repo.CountCommentsByPost(ctx, pgtype.UUID{Bytes: postID, Valid: true})
+	if err != nil {
+		return CommentsPageResult{}, err
+	}
+
+	totalPages := int((totalCount + int64(pageSize) - 1) / int64(pageSize))
+
+	comments, err := s.repo.GetCommentsByPost(ctx, database.GetCommentsByPostParams{
+		PostID: pgtype.UUID{Bytes: postID, Valid: true},
+		Limit:  int32(pageSize),
+		Offset: int32(offset),
 	})
+	if err != nil {
+		return CommentsPageResult{}, err
+	}
+
+	return CommentsPageResult{
+		Comments:    comments,
+		TotalCount:  totalCount,
+		TotalPages:  totalPages,
+		CurrentPage: page,
+		PageSize:    pageSize,
+	}, nil
 }

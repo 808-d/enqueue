@@ -6,6 +6,8 @@ import (
 	"enqueue/internal/services"
 	"log"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -19,7 +21,37 @@ func NewPostsHandler(postService *services.PostService) *PostsHandler {
 }
 
 func (h *PostsHandler) GetPosts(w http.ResponseWriter, r *http.Request) {
+	var cursorTime *time.Time
+	var cursorID *uuid.UUID
 
+	if timeStr := r.URL.Query().Get("cursor_time"); timeStr != "" {
+		if unixSec, err := strconv.ParseInt(timeStr, 10, 64); err == nil {
+			t := time.Unix(unixSec, 0)
+			cursorTime = &t
+		}
+	}
+	if idStr := r.URL.Query().Get("cursor_id"); idStr != "" {
+		if id, err := uuid.Parse(idStr); err == nil {
+			cursorID = &id
+		}
+	}
+
+	limit := int32(20)
+	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
+		if l, err := strconv.ParseInt(limitStr, 10, 32); err == nil && l > 0 && l <= 100 {
+			limit = int32(l)
+		}
+	}
+
+	posts, err := h.postService.GetPosts(r.Context(), cursorTime, cursorID, limit)
+
+	if err != nil {
+		http.Error(w, "failed to create post", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(posts)
 }
 func (h *PostsHandler) GetPostsByUser(w http.ResponseWriter, r *http.Request) {
 	userID, err := uuid.Parse(r.PathValue("id"))

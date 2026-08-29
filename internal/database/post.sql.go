@@ -67,15 +67,15 @@ WHERE p.id = $1 AND p.status <> 0
 `
 
 type GetPostWithOwnerRow struct {
-	CreateTime  pgtype.Timestamp
-	UpdateTime  pgtype.Timestamp
-	ID          pgtype.UUID
-	Title       pgtype.Text
-	Content     pgtype.Text
-	Thumbnail   pgtype.Text
-	Description pgtype.Text
-	Status      int32
-	UserID      pgtype.UUID
+	CreateTime  pgtype.Timestamp `json:"createTime"`
+	UpdateTime  pgtype.Timestamp `json:"updateTime"`
+	ID          pgtype.UUID      `json:"id"`
+	Title       pgtype.Text      `json:"title"`
+	Content     pgtype.Text      `json:"content"`
+	Thumbnail   pgtype.Text      `json:"thumbnail"`
+	Description pgtype.Text      `json:"description"`
+	Status      int32            `json:"status"`
+	UserID      pgtype.UUID      `json:"userId"`
 }
 
 func (q *Queries) GetPostWithOwner(ctx context.Context, id pgtype.UUID) (GetPostWithOwnerRow, error) {
@@ -93,6 +93,93 @@ func (q *Queries) GetPostWithOwner(ctx context.Context, id pgtype.UUID) (GetPost
 		&i.UserID,
 	)
 	return i, err
+}
+
+const getPosts = `-- name: GetPosts :many
+SELECT
+    p.id,
+    p.title,
+    EXTRACT(EPOCH FROM p.create_time)::bigint AS create_time,
+    u.username,
+    u.avatar,
+    COALESCE(l.likes_count, 0) AS likes_count,
+    COALESCE(rp.reposts_count, 0) AS reposts_count,
+    COALESCE(cmt.comments_count, 0) AS comments_count,
+    (COALESCE(l.likes_count, 0) * 1)
+        + (COALESCE(cmt.comments_count, 0) * 5)
+        + (COALESCE(rp.reposts_count, 0) * 10) AS score
+FROM posts p
+INNER JOIN composes c ON p.id = c.post_id
+INNER JOIN users u ON c.user_id = u.id
+LEFT JOIN (
+    SELECT post_id, COUNT(*) AS likes_count
+    FROM likes
+    GROUP BY post_id
+) l ON p.id = l.post_id
+LEFT JOIN (
+    SELECT post_id, COUNT(*) AS reposts_count
+    FROM reposts
+    GROUP BY post_id
+) rp ON p.id = rp.post_id
+LEFT JOIN (
+    SELECT post_id, COUNT(*) AS comments_count
+    FROM comments
+    GROUP BY post_id
+) cmt ON p.id = cmt.post_id
+WHERE p.status <> 0
+  AND ($1::timestamptz IS NULL OR $2::uuid IS NULL OR 
+       p.create_time < $1
+       OR (p.create_time = $1 AND p.id < $2))
+ORDER BY score DESC, p.id DESC
+LIMIT $3
+`
+
+type GetPostsParams struct {
+	Column1 pgtype.Timestamptz `json:"column1"`
+	Column2 pgtype.UUID        `json:"column2"`
+	Limit   int32              `json:"limit"`
+}
+
+type GetPostsRow struct {
+	ID            pgtype.UUID `json:"id"`
+	Title         pgtype.Text `json:"title"`
+	CreateTime    int64       `json:"createTime"`
+	Username      string      `json:"username"`
+	Avatar        pgtype.Text `json:"avatar"`
+	LikesCount    int64       `json:"likesCount"`
+	RepostsCount  int64       `json:"repostsCount"`
+	CommentsCount int64       `json:"commentsCount"`
+	Score         int32       `json:"score"`
+}
+
+func (q *Queries) GetPosts(ctx context.Context, arg GetPostsParams) ([]GetPostsRow, error) {
+	rows, err := q.db.Query(ctx, getPosts, arg.Column1, arg.Column2, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetPostsRow
+	for rows.Next() {
+		var i GetPostsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.CreateTime,
+			&i.Username,
+			&i.Avatar,
+			&i.LikesCount,
+			&i.RepostsCount,
+			&i.CommentsCount,
+			&i.Score,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getPostsByUser = `-- name: GetPostsByUser :many
@@ -145,11 +232,11 @@ RETURNING create_time, update_time, id, title, content, thumbnail, description, 
 `
 
 type UpdatePostParams struct {
-	ID          pgtype.UUID
-	Title       pgtype.Text
-	Content     pgtype.Text
-	Description pgtype.Text
-	Thumbnail   pgtype.Text
+	ID          pgtype.UUID `json:"id"`
+	Title       pgtype.Text `json:"title"`
+	Content     pgtype.Text `json:"content"`
+	Description pgtype.Text `json:"description"`
+	Thumbnail   pgtype.Text `json:"thumbnail"`
 }
 
 func (q *Queries) UpdatePost(ctx context.Context, arg UpdatePostParams) (Post, error) {
@@ -184,8 +271,8 @@ RETURNING create_time, update_time, id, title, content, thumbnail, description, 
 `
 
 type UpdatePostStatusParams struct {
-	ID     pgtype.UUID
-	Status int32
+	ID     pgtype.UUID `json:"id"`
+	Status int32       `json:"status"`
 }
 
 func (q *Queries) UpdatePostStatus(ctx context.Context, arg UpdatePostStatusParams) (Post, error) {

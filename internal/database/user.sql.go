@@ -17,8 +17,8 @@ where id = $1 and is_delete = false
 `
 
 type AddPendingEmailParams struct {
-	ID           pgtype.UUID
-	PendingEmail pgtype.Text
+	ID           pgtype.UUID `json:"id"`
+	PendingEmail pgtype.Text `json:"pendingEmail"`
 }
 
 func (q *Queries) AddPendingEmail(ctx context.Context, arg AddPendingEmailParams) error {
@@ -63,10 +63,10 @@ RETURNING id
 `
 
 type CreateUserParams struct {
-	Username string
-	Email    string
-	Password pgtype.Text
-	Name     pgtype.Text
+	Username string      `json:"username"`
+	Email    string      `json:"email"`
+	Password pgtype.Text `json:"password"`
+	Name     pgtype.Text `json:"name"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (pgtype.UUID, error) {
@@ -124,13 +124,13 @@ where is_delete = false and id = $1
 `
 
 type GetUserByIDRow struct {
-	ID       pgtype.UUID
-	Username string
-	Name     pgtype.Text
-	Email    string
-	Avatar   pgtype.Text
-	Bio      pgtype.Text
-	Role     string
+	ID       pgtype.UUID `json:"id"`
+	Username string      `json:"username"`
+	Name     pgtype.Text `json:"name"`
+	Email    string      `json:"email"`
+	Avatar   pgtype.Text `json:"avatar"`
+	Bio      pgtype.Text `json:"bio"`
+	Role     string      `json:"role"`
 }
 
 func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (GetUserByIDRow, error) {
@@ -180,8 +180,8 @@ WHERE username = $1 AND password = $2 AND is_delete = false LIMIT 1
 `
 
 type GetUserByUsernameAndPasswordParams struct {
-	Username string
-	Password pgtype.Text
+	Username string      `json:"username"`
+	Password pgtype.Text `json:"password"`
 }
 
 func (q *Queries) GetUserByUsernameAndPassword(ctx context.Context, arg GetUserByUsernameAndPasswordParams) (User, error) {
@@ -262,8 +262,8 @@ where id = $1 and is_delete = false
 `
 
 type UpdatePasswordParams struct {
-	ID       pgtype.UUID
-	Password pgtype.Text
+	ID       pgtype.UUID `json:"id"`
+	Password pgtype.Text `json:"password"`
 }
 
 func (q *Queries) UpdatePassword(ctx context.Context, arg UpdatePasswordParams) error {
@@ -284,11 +284,11 @@ RETURNING is_delete, create_time, update_time, id, username, email, avatar, pass
 `
 
 type UpdateUserNotIncludeEmailParams struct {
-	ID       pgtype.UUID
-	Username string
-	Name     pgtype.Text
-	Avatar   pgtype.Text
-	Bio      pgtype.Text
+	ID       pgtype.UUID `json:"id"`
+	Username string      `json:"username"`
+	Name     pgtype.Text `json:"name"`
+	Avatar   pgtype.Text `json:"avatar"`
+	Bio      pgtype.Text `json:"bio"`
 }
 
 func (q *Queries) UpdateUserNotIncludeEmail(ctx context.Context, arg UpdateUserNotIncludeEmailParams) (User, error) {
@@ -328,8 +328,8 @@ AND is_delete = false
 `
 
 type UserExistsByUsernameOrEmailParams struct {
-	Username string
-	Email    string
+	Username string `json:"username"`
+	Email    string `json:"email"`
 }
 
 func (q *Queries) UserExistsByUsernameOrEmail(ctx context.Context, arg UserExistsByUsernameOrEmailParams) (bool, error) {
