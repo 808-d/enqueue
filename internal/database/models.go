@@ -12,8 +12,8 @@ type AuditLog struct {
 	ID         pgtype.UUID      `json:"id"`
 	Action     string           `json:"action"`
 	EntityName string           `json:"entityName"`
-	OldValue   pgtype.Text      `json:"oldValue"`
-	NewValue   pgtype.Text      `json:"newValue"`
+	OldValue   []byte           `json:"oldValue"`
+	NewValue   []byte           `json:"newValue"`
 	CreateBy   pgtype.UUID      `json:"createBy"`
 	CreateTime pgtype.Timestamp `json:"createTime"`
 }

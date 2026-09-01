@@ -94,7 +94,7 @@ func (h *PostsHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updatedPost, err := h.postService.UpdatePost(r.Context(), req.ID, req.Title, req.Content)
+	updatedPost, err := h.postService.UpdatePost(r.Context(), req.ID, req.Title, req.Content, req.Description, req.ThumbnailUrl)
 	if err != nil {
 		http.Error(w, "failed to update post", http.StatusInternalServerError)
 		return

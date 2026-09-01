@@ -75,7 +75,7 @@ export default function Read() {
   };
 
   useEffect(() => {
-    if (postId === undefined || postId === null || postId === "") {
+    if (!postId || postId === "") {
       setLoading(false);
       return;
     }

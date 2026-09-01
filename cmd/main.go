@@ -57,6 +57,7 @@ func main() {
 	postHub := ws.NewPostHub()
 
 	notisService := services.NewNotisService(queries, notiHub)
+	notisHandler := handlers.NewNotisHandler(notisService)
 
 	commentService := services.NewCommentService(queries, notisService, postHub, pool)
 	commentHandler := handlers.NewCommentssHandler(commentService)
@@ -67,8 +68,8 @@ func main() {
 	likeService := services.NewLikeService(queries, notiHub, pool)
 	likeHandler := handlers.NewLikeHandler(likeService)
 
-	notisHandler := handlers.NewNotisHandler(notisService)
-
+	repostsService := services.NewRepostsSerice(pool)
+	repostsHandler := handlers.NewRepostHandler(repostsService)
 	mux := http.NewServeMux()
 	handlers.RegisterUserRoutes(mux, usersHandler)
 	handlers.RegisterPostRoutes(mux, postsHandler)
@@ -77,6 +78,7 @@ func main() {
 	handlers.RegisterFollowRoutes(mux, followsHandler)
 	handlers.RegisterLikeRoutes(mux, likeHandler)
 	handlers.RegisterNotificationRoutes(mux, notisHandler)
+	handlers.RegisterRepostRoutes(mux, repostsHandler)
 
 	handlers.WsRoutes(mux, notiHub, postHub)
 	// middlewares

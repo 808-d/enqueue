@@ -51,6 +51,8 @@ WHERE p.id = $1 AND p.status <> 0;
 SELECT
     p.id,
     p.title,
+    p.description,
+    p.thumbnail,
     EXTRACT(EPOCH FROM p.create_time)::bigint AS create_time,
     u.username,
     u.avatar,

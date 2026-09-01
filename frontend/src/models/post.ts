@@ -19,4 +19,6 @@ export type FeedPost = {
   commentsCount: number;
   score: number;
   createTime: number | null;
+  thumbnail: string | null;
+  description: string | null;
 };

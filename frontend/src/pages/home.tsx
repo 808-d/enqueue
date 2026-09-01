@@ -87,8 +87,8 @@ function Mid() {
   };
 
   return (
-    <Grid size={{ xs: 4, md: 8 }}>
-      <Stack spacing={2}>
+    <Grid size={{ xs: 12, sm: 8, md: 8 }}>
+      <Stack>
         {user && (
           <FilledTextField
             placeholder="What's on your mind?"
@@ -108,22 +108,25 @@ function Mid() {
             }}
           />
         )}
-        {posts.length > 0 && <Divider />}
-        {posts.map((post) => (
-          <PostCard
-            key={post.id}
-            id={post.id}
-            title={post.title || "No Title"}
-            description={null}
-            status={2}
-            likes={post.likesCount}
-            comments={post.commentsCount}
-            reposts={post.repostsCount}
-            onDelete={() => {
-              setPosts((prev) => prev.filter((p) => p.id !== post.id));
-            }}
-          />
-        ))}
+        <Box sx={{ width: "60%", margin: "auto" }}>
+          {posts.length > 0 && <Divider />}
+          {posts.map((post) => (
+            <PostCard
+              key={post.id}
+              id={post.id}
+              title={post.title || "No Title"}
+              description={post.description}
+              status={2}
+              likes={post.likesCount}
+              comments={post.commentsCount}
+              reposts={post.repostsCount}
+              thumbnail={post.thumbnail}
+              onDelete={() => {
+                setPosts((prev) => prev.filter((p) => p.id !== post.id));
+              }}
+            />
+          ))}
+        </Box>
         {hasMore && (
           <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
             <Button

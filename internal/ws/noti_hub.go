@@ -51,7 +51,7 @@ func (h *NotificationHub) PushToUser(userID uuid.UUID, payload any) {
 
 	conns, ok := h.conns[userID]
 	if !ok {
-		return // user isn't currently connected — safe no-op, notification is already in Postgres
+		return
 	}
 
 	data, err := json.Marshal(payload)

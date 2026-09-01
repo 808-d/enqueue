@@ -99,6 +99,8 @@ const getPosts = `-- name: GetPosts :many
 SELECT
     p.id,
     p.title,
+    p.description,
+    p.thumbnail,
     EXTRACT(EPOCH FROM p.create_time)::bigint AS create_time,
     u.username,
     u.avatar,
@@ -143,6 +145,8 @@ type GetPostsParams struct {
 type GetPostsRow struct {
 	ID            pgtype.UUID `json:"id"`
 	Title         pgtype.Text `json:"title"`
+	Description   pgtype.Text `json:"description"`
+	Thumbnail     pgtype.Text `json:"thumbnail"`
 	CreateTime    int64       `json:"createTime"`
 	Username      string      `json:"username"`
 	Avatar        pgtype.Text `json:"avatar"`
@@ -164,6 +168,8 @@ func (q *Queries) GetPosts(ctx context.Context, arg GetPostsParams) ([]GetPostsR
 		if err := rows.Scan(
 			&i.ID,
 			&i.Title,
+			&i.Description,
+			&i.Thumbnail,
 			&i.CreateTime,
 			&i.Username,
 			&i.Avatar,

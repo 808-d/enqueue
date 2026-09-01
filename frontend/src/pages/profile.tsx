@@ -137,6 +137,7 @@ export function Profile() {
       drafts: posts.filter((post) => post.status === 1),
       published: posts.filter((post) => post.status === 2),
       hidden: posts.filter((post) => post.status === 3),
+      reposts: posts.filter((post) => post.repostsCount > 0),
     };
   }, [posts]);
   if (!user) {
@@ -174,8 +175,8 @@ export function Profile() {
               }}
             >
               <Avatar
-                username={profile?.Username ?? null}
-                avatar={profile?.Avatar ?? null}
+                username={profile?.username ?? null}
+                avatar={profile?.avatar ?? null}
                 size={110}
                 sx={{
                   border: `4px solid ${catppuccin.base}`,
@@ -192,7 +193,7 @@ export function Profile() {
                     letterSpacing: "-0.02em",
                   }}
                 >
-                  {profile?.Username}
+                  {profile?.username}
                 </Typography>
                 <Typography
                   sx={{
@@ -201,13 +202,13 @@ export function Profile() {
                     fontSize: "0.95rem",
                   }}
                 >
-                  @{profile?.Username}
+                  @{profile?.username}
                 </Typography>
               </Box>
             </Box>
 
             {/* Bio */}
-            {profile?.Bio && (
+            {profile?.bio && (
               <Typography
                 sx={{
                   mt: 2,
@@ -218,7 +219,7 @@ export function Profile() {
                   textAlign: "left",
                 }}
               >
-                {profile?.Bio}
+                {profile?.bio}
               </Typography>
             )}
 
@@ -582,7 +583,7 @@ export function Profile() {
                       <PostCard
                         key={post.id}
                         id={post.id}
-                        title={(post.title ?? "No title")}
+                        title={post.title ?? "No title"}
                         description={post.description}
                         status={post.status}
                         updatedAt={post.updateTime}

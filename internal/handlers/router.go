@@ -18,7 +18,12 @@ func RegisterUserRoutes(mux *http.ServeMux, h *UsersHandler) {
 func RegisterLikeRoutes(mux *http.ServeMux, h *LikeHandler) {
 	mux.Handle("POST /posts/like/{postId}", middlewares.AuthMiddleware(http.HandlerFunc(h.LikePost)))
 	mux.Handle("DELETE /posts/like/{postId}", middlewares.AuthMiddleware(http.HandlerFunc(h.UnlikePost)))
-	mux.HandleFunc("GET /posts/like/{postId}", h.GetLikeStatus)
+	mux.Handle("GET /posts/like/{postId}", middlewares.AuthMiddleware(http.HandlerFunc(h.GetLikeStatus)))
+}
+
+func RegisterRepostRoutes(mux *http.ServeMux, h *RepostHandler) {
+	mux.Handle("POST /posts/repost/{postId}", middlewares.AuthMiddleware(http.HandlerFunc(h.Repost)))
+	mux.Handle("DELETE /posts/repost/{postId}", middlewares.AuthMiddleware(http.HandlerFunc(h.UnRepost)))
 }
 
 func RegisterPostRoutes(mux *http.ServeMux, h *PostsHandler) {

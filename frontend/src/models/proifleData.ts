@@ -1,9 +1,9 @@
 export type ProfileData = {
-  ID: string;
-  Username: string;
-  Name: string | null;
-  Email: string;
-  Bio: string | null;
-  Avatar: string | null;
-  Role: string;
+  id: string;
+  username: string;
+  name: string | null;
+  email: string;
+  bio: string | null;
+  avatar: string | null;
+  role: string;
 };

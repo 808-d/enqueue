@@ -1,18 +1,22 @@
 import {
-  Box,
-  Card,
-  CardContent,
-  Chip,
-  IconButton,
-  Modal,
-  Stack,
-  Typography,
+	Alert,
+	Box,
+	Button,
+	Card,
+	CardContent,
+	Chip,
+	IconButton,
+	Modal,
+	Snackbar,
+	Stack,
+	Typography,
 } from "@mui/material";
 
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutlined";
 import RepeatIcon from "@mui/icons-material/Repeat";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -21,388 +25,695 @@ import { useEditor } from "@tiptap/react";
 import CommentEditor from "./commentEditor";
 import { useComments } from "../../hooks/useComments";
 import { useLikes } from "../../hooks/useLikes";
-import MoreVertIcon from "@mui/icons-material/MoreVert";
+import { usePosts } from "../../hooks/usePosts";
+
 import EditDeleteMenu from "../common/editDeleteMenu";
 import { commentEditorExtensions } from "../common/commentEditorExtensions";
 import { useAppTheme } from "../../contexts/themeContext";
+
 type PostCardProps = {
-  id: string;
-  title: string;
-  description?: string | null;
-  status: number;
-  updatedAt?: string | null;
+	id: string;
+	title: string;
+	description?: string | null;
+	thumbnail?: string | null;
+	status: number;
+	updatedAt?: string | null;
 
-  likes?: number;
-  comments?: number;
-  reposts?: number;
+	likes?: number;
+	comments?: number;
+	reposts?: number;
 
-  onClick?: () => void;
-  onDelete: (id: string) => void;
+	onClick?: () => void;
+	onDelete: (id: string) => void;
 };
 
 const statusMap = {
-  1: { label: "Draft", color: "default" as const },
-  2: { label: "Published", color: "success" as const },
-  3: { label: "Hidden", color: "warning" as const },
+	1: {
+		label: "Draft",
+		color: "default" as const,
+	},
+	2: {
+		label: "Published",
+		color: "success" as const,
+	},
+	3: {
+		label: "Hidden",
+		color: "warning" as const,
+	},
 };
 
 export default function PostCard({
-  id,
-  title,
-  description,
-  status,
-  updatedAt,
-  likes = 0,
-  comments = 0,
-  reposts = 0,
-  onClick,
-  onDelete,
+	id,
+	title,
+	description,
+	status,
+	updatedAt,
+	likes = 0,
+	comments = 0,
+	reposts = 0,
+	onClick,
+	onDelete,
 }: PostCardProps) {
-  const statusInfo = statusMap[status as keyof typeof statusMap];
-  const { catppuccin } = useAppTheme();
-  const navigate = useNavigate();
+	const { catppuccin } = useAppTheme();
+	const navigate = useNavigate();
 
-  const { likePost, unlikePost, getLikeStatus } = useLikes();
-  const [likeCount, setLikeCount] = useState(likes);
-  const [isLiked, setIsLiked] = useState(false);
+	const statusInfo = statusMap[status as keyof typeof statusMap];
 
-  useEffect(() => {
-    if (status !== 1) {
-      getLikeStatus(id).then((data) => {
-        if (data.liked !== undefined) {
-          setIsLiked(data.liked);
-          setLikeCount(data.likeCount);
-        }
-      });
-    }
-  }, [id]);
+	const { likePost, unlikePost, getLikeStatus } = useLikes();
 
-  const handleLike = async () => {
-    if (isLiked) {
-      try {
-        await unlikePost(id);
-        setIsLiked(false);
-        setLikeCount((prev) => prev - 1);
-      } catch (err) {
-        console.error("Failed to unlike post:", err);
-      }
-    } else {
-      try {
-        await likePost(id);
-        setIsLiked(true);
-        setLikeCount((prev) => prev + 1);
-      } catch (err) {
-        console.error("Failed to like post:", err);
-      }
-    }
-  };
+	const { repost, unrepost } = usePosts();
 
-  const handleCardClick = () => {
-    if (onClick) {
-      onClick();
-      return;
-    }
+	const { createComment, updateComment, deleteComment } = useComments();
 
-    if (status === 1) {
-      navigate(`/compose?id=${id}`);
-    } else if (status === 2) {
-      navigate(`/read?id=${id}`);
-    }
-  };
+	const [likeCount, setLikeCount] = useState(likes);
+	const [repostCount, setRepostCount] = useState(reposts);
 
-  const [open, setOpen] = useState(false);
-  const { createComment, updateComment, deleteComment } = useComments();
-  const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
-  const menuOpen = Boolean(menuAnchor);
+	const [isLiked, setIsLiked] = useState(false);
+	const [isReposted, setIsReposted] = useState(false);
 
-  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    event.stopPropagation();
-    setMenuAnchor(event.currentTarget);
-  };
+	const [open, setOpen] = useState(false);
 
-  const handleMenuClose = () => {
-    setMenuAnchor(null);
-  };
+	const [menuAnchor, setMenuAnchor] =
+		useState<null | HTMLElement>(null);
 
-  const handleOpen = () => {
-    setOpen(true);
-  };
+	const [snackbar, setSnackbar] = useState({
+		open: false,
+		message: "",
+		severity: "success" as "success" | "error",
+	});
 
-  const handleClose = () => {
-    setOpen(false);
-  };
-  const style = {
-    position: "absolute" as const,
-    top: "50%",
-    left: "50%",
-    transform: "translate(-50%, -50%)",
-    width: 600,
-    maxWidth: "90vw",
-    bgcolor: catppuccin.base,
-    border: `1px solid ${catppuccin.surface1}`,
-    borderRadius: 2,
-    color: catppuccin.text,
-    boxShadow: 24,
-    p: 3,
-  };
-  const editor = useEditor({
-    extensions: commentEditorExtensions,
+	const menuOpen = Boolean(menuAnchor);
 
-    content: "",
-  });
+	const editor = useEditor({
+		extensions: commentEditorExtensions,
+		content: "",
+	});
 
-  const handleCreateComment = async (
-    id: string,
-    comment: string,
-    replyTo?: string,
-  ) => {
-    if (!id.trim()) {
-      console.error("Post ID is required");
-      return;
-    }
+	/*
+	 * Get current like status.
+	 */
+	useEffect(() => {
+		if (status === 1) {
+			return;
+		}
 
-    if (!comment.trim()) {
-      console.error("Comment cannot be empty");
-      return;
-    }
+		const loadLikeStatus = async () => {
+			try {
+				const data = await getLikeStatus(id);
 
-    try {
-      await createComment(id, comment, replyTo);
-    } catch (error) {
-      console.error("Failed to create comment:", error);
-    }
-  };
+				if (data?.liked !== undefined) {
+					setIsLiked(data.liked);
+				}
 
-  const handleUpdateComment = async (id: string, comment: string) => {
-    if (!id.trim()) {
-      console.error("Comment ID is required");
-      return;
-    }
+				if (data?.likeCount !== undefined) {
+					setLikeCount(data.likeCount);
+				}
+			} catch (err) {
+				console.error(
+					"Failed to get like status:",
+					err,
+				);
+			}
+		};
 
-    if (!comment.trim()) {
-      console.error("Comment cannot be empty");
-      return;
-    }
+		loadLikeStatus();
+	}, [id, status, getLikeStatus]);
 
-    try {
-      await updateComment(id, comment);
-    } catch (error) {
-      console.error("Failed to update comment:", error);
-    }
-  };
+	/*
+	 * Like / unlike.
+	 */
+	const handleLike = async (
+		event: React.MouseEvent,
+	) => {
+		event.stopPropagation();
 
-  const handleDeleteComment = async (id: string) => {
-    if (!id.trim()) {
-      console.error("Comment ID is required");
-      return;
-    }
+		try {
+			if (isLiked) {
+				await unlikePost(id);
 
-    try {
-      await deleteComment(id);
-    } catch (error) {
-      console.error("Failed to delete comment:", error);
-    }
-  };
-  if (!editor) {
-    return null;
-  }
+				setIsLiked(false);
+				setLikeCount((prev) => Math.max(0, prev - 1));
+			} else {
+				await likePost(id);
 
-  return (
-    <>
-      <Card
-        onClick={handleCardClick}
-        sx={{
-          cursor: onClick || status === 1 || status === 2 ? "pointer" : "default",
-          backgroundColor: "#313244",
-          color: "#cdd6f4",
-          border: "1px solid #45475a",
-          borderRadius: 2,
-          transition: "0.2s",
+				setIsLiked(true);
+				setLikeCount((prev) => prev + 1);
+			}
+		} catch (err) {
+			console.error(
+				"Failed to update like:",
+				err,
+			);
+		}
+	};
 
-          "&:hover": onClick || status === 1 || status === 2
-            ? {
-                borderColor: catppuccin.mauve,
-                transform: "translateY(-2px)",
-              }
-            : undefined,
-        }}
-      >
-        <CardContent>
-          <Stack spacing={1.5}>
-            {/* Header */}
-            <Box
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-              }}
-            >
-              <Typography
-                variant="h6"
-                sx={{
-                  fontWeight: 600,
-                  color: "#cdd6f4",
-                }}
-              >
-                {title || "No Title"}
-              </Typography>
+	/*
+	 * Repost / unrepost.
+	 */
+	const handleRepost = async (
+		event: React.MouseEvent,
+	) => {
+		event.stopPropagation();
 
-              <Box
-                sx={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                }}
-              >
-                <IconButton
-                  size="small"
-                  onClick={handleMenuOpen}
-                  sx={{
-                    color: "#a6adc8",
-                    "&:hover": {
-                      backgroundColor: "#45475a",
-                    },
-                  }}
-                >
-                  <MoreVertIcon fontSize="small" />
-                </IconButton>
+		try {
+			if (isReposted) {
+				await unrepost(id);
 
-                <EditDeleteMenu
-                  anchorEl={menuAnchor}
-                  open={menuOpen}
-                  onClose={handleMenuClose}
-                  onClick={(event) => event.stopPropagation()}
-                  onEdit={() => {
-                    setMenuAnchor(null);
-                    navigate(`/compose?id=${id}`);
-                  }}
-                  onDelete={() => {
-                    setMenuAnchor(null);
-                    onDelete(id);
-                  }}
-                />
+				setIsReposted(false);
+				setRepostCount((prev) =>
+					Math.max(0, prev - 1),
+				);
+			} else {
+				await repost(id);
 
-                {statusInfo && (
-                  <Chip
-                    label={statusInfo.label}
-                    color={statusInfo.color}
-                    size="small"
-                  />
-                )}
-              </Box>
-            </Box>
+				setIsReposted(true);
+				setRepostCount((prev) => prev + 1);
+			}
+		} catch (err) {
+			console.error(
+				"Failed to update repost:",
+				err,
+			);
+		}
+	};
 
-            {/* Description */}
-            {description && (
-              <Typography
-                variant="body2"
-                sx={{
-                  color: "#a6adc8",
-                  display: "-webkit-box",
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: "vertical",
-                  overflow: "hidden",
-                }}
-              >
-                {description}
-              </Typography>
-            )}
+	/*
+	 * Card navigation.
+	 */
+	const handleCardClick = () => {
+		if (onClick) {
+			onClick();
+			return;
+		}
 
-            {/* Engagement */}
-            {status !== 1 && (
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 2,
-                  color: "#a6adc8",
-                }}
-              >
-                <IconButton
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 0.5,
-                    color: isLiked ? "#f38ba8" : "#a6adc8",
-                  }}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    handleLike();
-                  }}
-                >
-                  {isLiked ? <FavoriteIcon fontSize="small" /> : <FavoriteBorderIcon fontSize="small" />}
+		if (status === 1) {
+			navigate(`/compose?id=${id}`);
+			return;
+		}
 
-                  <Typography variant="body2">{likeCount}</Typography>
-                </IconButton>
+		if (status === 2) {
+			navigate(`/read?id=${id}`);
+		}
+	};
 
-                <IconButton
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    handleOpen();
-                  }}
-                >
-                  <ChatBubbleOutlineIcon fontSize="small" />
+	/*
+	 * More menu.
+	 */
+	const handleMenuOpen = (
+		event: React.MouseEvent<HTMLElement>,
+	) => {
+		event.stopPropagation();
+		setMenuAnchor(event.currentTarget);
+	};
 
-                  <Typography variant="body2">{comments}</Typography>
-                </IconButton>
+	const handleMenuClose = () => {
+		setMenuAnchor(null);
+	};
 
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 0.5,
-                  }}
-                >
-                  <RepeatIcon fontSize="small" />
+	/*
+	 * Comment modal.
+	 */
+	const handleOpen = (
+		event?: React.MouseEvent,
+	) => {
+		event?.stopPropagation();
+		setOpen(true);
+	};
 
-                  <Typography variant="body2">{reposts}</Typography>
-                </Box>
-              </Box>
-            )}
+	const handleClose = () => {
+		setOpen(false);
+	};
 
-            {/* Updated */}
-            {updatedAt && (
-              <Typography
-                variant="caption"
-                sx={{
-                  color: "#6c7086",
-                }}
-              >
-                Updated {updatedAt}
-              </Typography>
-            )}
-          </Stack>
-        </CardContent>
-      </Card>
+	/*
+	 * Create comment.
+	 */
+	const handleCreateComment = async (
+		postId: string,
+		comment: string,
+		replyTo?: string,
+	) => {
+		if (!postId.trim()) {
+			console.error("Post ID is required");
+			return;
+		}
 
-      {/* Comment Modal */}
-      <Modal
-        open={open}
-        onClose={handleClose}
-        aria-labelledby="comment-modal-title"
-      >
-        <Box sx={style}>
-          <Typography
-            id="comment-modal-title"
-            variant="h6"
-            sx={{
-              mb: 2,
-              color: catppuccin.text,
-              fontWeight: 600,
-            }}
-          >
-            Write a comment
-          </Typography>
+		if (!comment.trim()) {
+			console.error("Comment cannot be empty");
+			return;
+		}
 
-          <CommentEditor
-            onSubmit={(comment) => {
-              handleCreateComment?.(id, comment);
-              handleClose();
-            }}
-            onCancel={handleClose}
-          />
-        </Box>
-      </Modal>
-    </>
-  );
+		try {
+			await createComment(
+				postId,
+				comment,
+				replyTo,
+			);
+
+			setSnackbar({
+				open: true,
+				message: "Comment created",
+				severity: "success",
+			});
+
+			handleClose();
+		} catch (error) {
+			console.error(
+				"Failed to create comment:",
+				error,
+			);
+
+			setSnackbar({
+				open: true,
+				message: "Failed to create comment",
+				severity: "error",
+			});
+		}
+	};
+
+	/*
+	 * Update comment.
+	 */
+	const handleUpdateComment = async (
+		commentId: string,
+		comment: string,
+	) => {
+		if (!commentId.trim()) {
+			console.error("Comment ID is required");
+			return;
+		}
+
+		if (!comment.trim()) {
+			console.error("Comment cannot be empty");
+			return;
+		}
+
+		try {
+			await updateComment(
+				commentId,
+				comment,
+			);
+		} catch (error) {
+			console.error(
+				"Failed to update comment:",
+				error,
+			);
+		}
+	};
+
+	/*
+	 * Delete comment.
+	 */
+	const handleDeleteComment = async (
+		commentId: string,
+	) => {
+		if (!commentId.trim()) {
+			console.error("Comment ID is required");
+			return;
+		}
+
+		try {
+			await deleteComment(commentId);
+		} catch (error) {
+			console.error(
+				"Failed to delete comment:",
+				error,
+			);
+		}
+	};
+
+	if (!editor) {
+		return null;
+	}
+
+	return (
+		<>
+			<Card
+				onClick={handleCardClick}
+				sx={{
+					cursor:
+						onClick ||
+							status === 1 ||
+							status === 2
+							? "pointer"
+							: "default",
+
+					backgroundColor:
+						catppuccin.surface0,
+
+					color: catppuccin.text,
+
+					border: `1px solid ${catppuccin.surface1}`,
+
+					borderRadius: 2,
+
+					transition: "0.2s",
+
+					marginTop: "16px",
+
+					"&:hover":
+						onClick ||
+							status === 1 ||
+							status === 2
+							? {
+								borderColor:
+									catppuccin.mauve,
+
+								transform:
+									"translateY(-2px)",
+							}
+							: undefined,
+				}}
+			>
+				<CardContent>
+					<Stack spacing={1.5}>
+
+						{/* Header */}
+						<Box
+							sx={{
+								display: "flex",
+								alignItems: "center",
+								justifyContent:
+									"space-between",
+								gap: 2,
+							}}
+						>
+							<Typography
+								variant="h6"
+								sx={{
+									fontWeight: 600,
+									color: catppuccin.text,
+									overflow: "hidden",
+									textOverflow: "ellipsis",
+								}}
+							>
+								{title || "No Title"}
+							</Typography>
+
+							<Box
+								sx={{
+									display: "flex",
+									flexDirection:
+										"column",
+									alignItems:
+										"center",
+									flexShrink: 0,
+								}}
+							>
+								<IconButton
+									size="small"
+									onClick={
+										handleMenuOpen
+									}
+									sx={{
+										color:
+											catppuccin.subtext0,
+
+										"&:hover": {
+											backgroundColor:
+												catppuccin.surface1,
+										},
+									}}
+								>
+									<MoreVertIcon fontSize="small" />
+								</IconButton>
+
+								<EditDeleteMenu
+									anchorEl={
+										menuAnchor
+									}
+									open={menuOpen}
+									onClose={
+										handleMenuClose
+									}
+									onClick={(event) =>
+										event.stopPropagation()
+									}
+									onEdit={() => {
+										setMenuAnchor(null);
+
+										navigate(
+											`/compose?id=${id}`,
+										);
+									}}
+									onDelete={() => {
+										setMenuAnchor(null);
+
+										onDelete(id);
+									}}
+								/>
+
+								{statusInfo && (
+									<Chip
+										label={
+											statusInfo.label
+										}
+										color={
+											statusInfo.color
+										}
+										size="small"
+									/>
+								)}
+							</Box>
+						</Box>
+
+						{/* Description */}
+						{description && (
+							<Typography
+								variant="body2"
+								sx={{
+									color:
+										catppuccin.subtext0,
+
+									display:
+										"-webkit-box",
+
+									WebkitLineClamp: 2,
+
+									WebkitBoxOrient:
+										"vertical",
+
+									overflow: "hidden",
+								}}
+							>
+								{description}
+							</Typography>
+						)}
+
+						{thumbnail && (
+							<Typography
+								sx={{ mt: 1 }}
+							>
+								<img
+									src={thumbnail}
+									alt="Post thumbnail"
+									sx={{ width: 100, height: 100, borderRadius: 2 }}
+								/>
+							</Typography>
+						)}
+
+						{/* Engagement */}
+						{status !== 1 && (
+							<Box
+								sx={{
+									display: "flex",
+									alignItems:
+										"center",
+									gap: 1,
+									color:
+										catppuccin.subtext0,
+								}}
+							>
+								{/* Like */}
+								<IconButton
+									size="small"
+									onClick={
+										handleLike
+									}
+									sx={{
+										display: "flex",
+										alignItems:
+											"center",
+										gap: 0.5,
+
+										color: isLiked
+											? catppuccin.red
+											: catppuccin.subtext0,
+									}}
+								>
+									{isLiked ? (
+										<FavoriteIcon fontSize="small" />
+									) : (
+										<FavoriteBorderIcon fontSize="small" />
+									)}
+
+									<Typography variant="body2">
+										{likeCount}
+									</Typography>
+								</IconButton>
+
+								{/* Comments */}
+								<IconButton
+									size="small"
+									onClick={
+										handleOpen
+									}
+									sx={{
+										display: "flex",
+										alignItems:
+											"center",
+										gap: 0.5,
+
+										color:
+											catppuccin.subtext0,
+									}}
+								>
+									<ChatBubbleOutlineIcon fontSize="small" />
+
+									<Typography variant="body2">
+										{comments}
+									</Typography>
+								</IconButton>
+
+								{/* Repost */}
+								<IconButton
+									size="small"
+									onClick={
+										handleRepost
+									}
+									sx={{
+										display: "flex",
+										alignItems:
+											"center",
+										gap: 0.5,
+
+										color: isReposted
+											? catppuccin.green
+											: catppuccin.subtext0,
+									}}
+								>
+									<RepeatIcon fontSize="small" />
+
+									<Typography variant="body2">
+										{repostCount}
+									</Typography>
+								</IconButton>
+							</Box>
+						)}
+
+						{/* Updated */}
+						{updatedAt && (
+							<Typography
+								variant="caption"
+								sx={{
+									color:
+										catppuccin.overlay0,
+								}}
+							>
+								Updated {updatedAt}
+							</Typography>
+						)}
+					</Stack>
+				</CardContent>
+			</Card>
+
+			{/* Comment Modal */}
+			<Modal
+				open={open}
+				onClose={handleClose}
+				aria-labelledby="comment-modal-title"
+			>
+				<Box
+					sx={{
+						position:
+							"absolute",
+						top: "50%",
+						left: "50%",
+						transform:
+							"translate(-50%, -50%)",
+
+						width: 600,
+						maxWidth: "90vw",
+
+						bgcolor:
+							catppuccin.base,
+
+						border: `1px solid ${catppuccin.surface1}`,
+
+						borderRadius: 2,
+
+						color:
+							catppuccin.text,
+
+						boxShadow: 24,
+
+						p: 3,
+					}}
+				>
+					<Typography
+						id="comment-modal-title"
+						variant="h6"
+						sx={{
+							mb: 2,
+							color:
+								catppuccin.text,
+							fontWeight: 600,
+						}}
+					>
+						Write a comment
+					</Typography>
+
+					<CommentEditor
+						onSubmit={(comment) =>
+							handleCreateComment(
+								id,
+								comment,
+							)
+						}
+						onCancel={
+							handleClose
+						}
+					/>
+				</Box>
+			</Modal>
+
+			{/* Snackbar */}
+			<Snackbar
+				open={
+					snackbar.open
+				}
+				autoHideDuration={
+					3000
+				}
+				onClose={() =>
+					setSnackbar(
+						(prev) => ({
+							...prev,
+							open: false,
+						}),
+					)
+				}
+				anchorOrigin={{
+					vertical: "top",
+					horizontal: "right",
+				}}
+			>
+				<Alert
+					severity={
+						snackbar.severity
+					}
+					variant="filled"
+					onClose={() =>
+						setSnackbar(
+							(prev) => ({
+								...prev,
+								open: false,
+							}),
+						)
+					}
+				>
+					{snackbar.message}
+				</Alert>
+			</Snackbar>
+		</>
+	);
 }

@@ -49,6 +49,9 @@ export function usePosts() {
     title: string,
     content: string,
     status: number,
+    description: string,
+    thumbnailUrl: string | null,
+    thumbnailPublicId: string | null,
   ) {
     const response = await axios.patch(
       endpoints.posts,
@@ -57,12 +60,36 @@ export function usePosts() {
         title,
         content,
         status,
+        description,
+        thumbnailUrl,
+        thumbnailPublicId,
       },
       {
         withCredentials: true,
       },
     );
     return response;
+  }
+
+  async function repost(postId: string): Promise<boolean> {
+    const response = await axios.post(
+      `${endpoints.posts}/repost/${postId}`,
+      {},
+      {
+        withCredentials: true,
+      },
+    );
+    return response.data.reposted;
+  }
+
+  async function unrepost(postId: string): Promise<boolean> {
+    const response = await axios.delete(
+      `${endpoints.posts}/repost/${postId}`,
+      {
+        withCredentials: true,
+      },
+    );
+    return response.data.unreposted;
   }
 
   async function createPost() {
@@ -90,6 +117,8 @@ export function usePosts() {
     updatePostStatus,
     createPost,
     updatePost,
+    repost,
+    unrepost,
     getPostById,
   };
 }
