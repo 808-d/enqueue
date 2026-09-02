@@ -90,15 +90,10 @@ const Compose = () => {
   const [searchParams] = useSearchParams();
   const postId = searchParams.get("id");
 
-  const [, setPost] = useState<Post | null>(null);
-
-  const [title, setTitle] = useState("No title");
+  const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
 
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
-  const [thumbnailPublicId, setThumbnailPublicId] = useState<string | null>(
-    null,
-  );
 
   const { uploadImage } = useCloudinary();
   const { updatePost, getPostById } = usePosts();
@@ -190,22 +185,16 @@ const Compose = () => {
         },
       }),
     ],
+    content: "",
   });
 
   // Fetch existing post when editing.
-  const hasFetchedPost = useRef(false);
+  const pendingContentRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!postId) {
-      hasFetchedPost.current = false;
       return;
     }
-
-    if (hasFetchedPost.current) {
-      return;
-    }
-
-    hasFetchedPost.current = true;
 
     let cancelled = false;
 
@@ -220,15 +209,16 @@ const Compose = () => {
         if (response?.post) {
           const post = response.post;
 
-          setPost(post);
-
-          setTitle(post.title ?? "No title");
+          setTitle(post.title ?? "");
           setDescription(post.description ?? "");
-
           setThumbnailUrl(post.thumbnail ?? null);
 
-          if (editor && post.content) {
-            editor.commands.setContent(post.content);
+          if (post.content) {
+            if (editor) {
+              editor.commands.setContent(post.content);
+            } else {
+              pendingContentRef.current = post.content;
+            }
           }
         }
       } catch (err) {
@@ -245,7 +235,15 @@ const Compose = () => {
     return () => {
       cancelled = true;
     };
-  }, [postId, getPostById, editor]);
+  }, [postId, getPostById]);
+
+  // Apply pending content when editor becomes ready
+  useEffect(() => {
+    if (editor && pendingContentRef.current) {
+      editor.commands.setContent(pendingContentRef.current);
+      pendingContentRef.current = null;
+    }
+  }, [editor]);
 
   if (!editor) {
     return null;
@@ -302,7 +300,6 @@ const Compose = () => {
       }
 
       setThumbnailUrl(result.url);
-      setThumbnailPublicId(result.publicId);
     } finally {
       event.target.value = "";
     }
@@ -329,7 +326,6 @@ const Compose = () => {
         status,
         description,
         thumbnailUrl,
-        thumbnailPublicId,
       );
 
       setSnackbar({

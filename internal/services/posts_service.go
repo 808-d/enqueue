@@ -38,6 +38,13 @@ func (s *PostService) GetPosts(ctx context.Context, cursorTime *time.Time, curso
 	})
 }
 
+func (s *PostService) GetPostsByUser(ctx context.Context, userID uuid.UUID) ([]database.Post, error) {
+	return s.repo.GetPostsByUser(ctx, pgtype.UUID{
+		Bytes: userID,
+		Valid: true,
+	})
+}
+
 func (s *PostService) CreatePost(
 	ctx context.Context,
 	userID uuid.UUID,
@@ -49,9 +56,10 @@ func (s *PostService) CreatePost(
 	defer tx.Rollback(ctx)
 
 	qtx := s.repo.WithTx(tx)
-	// create empty post
+
 	post, err := qtx.CreatePost(ctx)
 	if err != nil {
+		s.logAudit(ctx, ActionCreate, EntityPost, userID, nil, post)
 		return database.Post{}, err
 	}
 
@@ -63,6 +71,7 @@ func (s *PostService) CreatePost(
 		PostID: post.ID,
 	})
 	if err != nil {
+		s.logAudit(ctx, ActionCreate, EntityPost, userID, nil, err.Error())
 		return database.Post{}, err
 	}
 
@@ -70,38 +79,19 @@ func (s *PostService) CreatePost(
 		return database.Post{}, err
 	}
 
-	// Audit log for post creation
 	s.logAudit(ctx, ActionCreate, EntityPost, userID, nil, post)
 
 	return post, nil
 }
 
-func (s *PostService) DeletePost(ctx context.Context, postId uuid.UUID) (database.Post, error) {
-	// Get old value before deletion
-	oldPost, err := s.repo.GetPostWithOwner(ctx, pgtype.UUID{Bytes: postId, Valid: true})
-	if err != nil {
-		return database.Post{}, err
-	}
-
-	deletedPost, err := s.repo.UpdatePostStatus(ctx, database.UpdatePostStatusParams{
-		ID: pgtype.UUID{
-			Bytes: postId,
-			Valid: true,
-		},
-		Status: 0,
-	})
-	if err != nil {
-		return database.Post{}, err
-	}
-
-	// Audit log for post deletion (soft delete)
-	s.logAudit(ctx, ActionDelete, EntityPost, uuid.UUID(oldPost.UserID.Bytes), oldPost, deletedPost)
-
-	return deletedPost, nil
-}
-
-func (s *PostService) UpdatePost(ctx context.Context, id uuid.UUID, title string, content string, description string, thumbnail string) (database.Post, error) {
-	// Get old value before update
+func (s *PostService) UpdatePost(
+	ctx context.Context,
+	id uuid.UUID,
+	title string,
+	content string,
+	description string,
+	thumbnailUrl string,
+) (database.Post, error) {
 	oldPost, err := s.repo.GetPostWithOwner(ctx, pgtype.UUID{Bytes: id, Valid: true})
 	if err != nil {
 		return database.Post{}, err
@@ -125,29 +115,41 @@ func (s *PostService) UpdatePost(ctx context.Context, id uuid.UUID, title string
 			Valid:  true,
 		},
 		Thumbnail: pgtype.Text{
-			String: thumbnail,
+			String: thumbnailUrl,
 			Valid:  true,
 		},
 	})
 	if err != nil {
+		s.logAudit(ctx, ActionUpdate, EntityPost, uuid.UUID(oldPost.UserID.Bytes), oldPost, err.Error())
 		return database.Post{}, err
 	}
 
-	// Audit log for post update
 	s.logAudit(ctx, ActionUpdate, EntityPost, uuid.UUID(oldPost.UserID.Bytes), oldPost, updatedPost)
 
 	return updatedPost, nil
 }
 
-func (s *PostService) GetPostsByUser(ctx context.Context, userId uuid.UUID) ([]database.Post, error) {
-	posts, err := s.repo.GetPostsByUser(ctx, pgtype.UUID{
-		Bytes: userId,
-		Valid: true,
+func (s *PostService) DeletePost(ctx context.Context, postId uuid.UUID) (database.Post, error) {
+	oldPost, err := s.repo.GetPostWithOwner(ctx, pgtype.UUID{Bytes: postId, Valid: true})
+	if err != nil {
+		return database.Post{}, err
+	}
+
+	deletedPost, err := s.repo.UpdatePostStatus(ctx, database.UpdatePostStatusParams{
+		ID: pgtype.UUID{
+			Bytes: postId,
+			Valid: true,
+		},
+		Status: 0,
 	})
 	if err != nil {
-		return []database.Post{}, err
+		s.logAudit(ctx, ActionDelete, EntityPost, uuid.UUID(oldPost.UserID.Bytes), oldPost, err.Error())
+		return database.Post{}, err
 	}
-	return posts, err
+
+	s.logAudit(ctx, ActionUpdate, EntityPost, uuid.UUID(oldPost.UserID.Bytes), oldPost, deletedPost)
+
+	return deletedPost, nil
 }
 
 func (s *PostService) GetPostById(ctx context.Context, postId uuid.UUID) (database.Post, []database.GetCommentsByPostRow, error) {
@@ -179,15 +181,15 @@ func (s *PostService) UpdatePostStatus(ctx context.Context, postId uuid.UUID) (d
 	return posts, err
 }
 
-func (s *PostService) logAudit(ctx context.Context, action Action, entity EntityName, userID uuid.UUID, oldVal any, newVal any) {
+func (s *PostService) logAudit(ctx context.Context, action Action, entity EntityName, userID uuid.UUID, oldVal interface{}, newVal interface{}) {
 	oldJSON, _ := json.Marshal(oldVal)
 	newJSON, _ := json.Marshal(newVal)
 
 	_ = s.repo.AddAuditLog(ctx, database.AddAuditLogParams{
-		Action:     string(action),
-		EntityName: string(entity),
-		OldValue:   oldJSON,
-		NewValue:   newJSON,
-		CreateBy:   pgtype.UUID{Bytes: userID, Valid: true},
+		Action:      string(action),
+		EntityName:  string(entity),
+		OldValue:    oldJSON,
+		NewValue:    newJSON,
+		CreateBy:    pgtype.UUID{Bytes: userID, Valid: true},
 	})
 }

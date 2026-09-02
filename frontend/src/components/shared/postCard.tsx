@@ -66,6 +66,7 @@ export default function PostCard({
 	id,
 	title,
 	description,
+	thumbnail,
 	status,
 	updatedAt,
 	likes = 0,

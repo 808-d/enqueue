@@ -8,5 +8,4 @@ type UpdatePostRequest struct {
 	Content string    `json:"content"`
 	Description string `json:"description"`
 	ThumbnailUrl string `json:"thumbnailUrl"`
-	ThumbnailPublicId string `json:"thumbnailPublicId"`
 }

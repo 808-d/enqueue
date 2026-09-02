@@ -3,18 +3,20 @@ package handlers
 
 import (
 	"enqueue/internal/middlewares"
+	"enqueue/internal/utils"
 	"enqueue/internal/ws"
 	"net/http"
 )
 
 func RegisterUserRoutes(mux *http.ServeMux, h *UsersHandler) {
 	mux.HandleFunc("GET /users", h.GetUsers)
-	mux.Handle("PATCH /users", middlewares.AuthMiddleware(http.HandlerFunc(h.UpdateUser)))
+	mux.Handle("PATCH /users", middlewares.AuthMiddleware(middlewares.AuthorizeMiddleware(http.HandlerFunc(h.UpdateUser), utils.RoleUser)))
 	mux.Handle("DELETE /users", middlewares.AuthMiddleware(http.HandlerFunc(h.DeleteUser)))
 	mux.Handle("GET /users/{id}", middlewares.AuthMiddleware(http.HandlerFunc(h.GetUserById)))
 	mux.HandleFunc("GET /me", h.Me)
 	mux.Handle("PATCH /password", middlewares.AuthMiddleware(http.HandlerFunc(h.ChangePassword)))
 }
+
 func RegisterLikeRoutes(mux *http.ServeMux, h *LikeHandler) {
 	mux.Handle("POST /posts/like/{postId}", middlewares.AuthMiddleware(http.HandlerFunc(h.LikePost)))
 	mux.Handle("DELETE /posts/like/{postId}", middlewares.AuthMiddleware(http.HandlerFunc(h.UnlikePost)))
@@ -30,9 +32,9 @@ func RegisterPostRoutes(mux *http.ServeMux, h *PostsHandler) {
 	mux.HandleFunc("GET /posts", h.GetPosts)
 	mux.HandleFunc("GET /posts/user/{id}", h.GetPostsByUser)
 	mux.HandleFunc("GET /posts/{id}", h.GetPostById)
-	mux.Handle("POST /posts", middlewares.AuthMiddleware(http.HandlerFunc(h.CreatePost)))
-	mux.Handle("PATCH /posts", middlewares.AuthMiddleware(http.HandlerFunc(h.UpdatePost)))
-	mux.Handle("PATCH /posts/{id}", middlewares.AuthMiddleware(http.HandlerFunc(h.DeletePost)))
+	mux.Handle("POST /posts", middlewares.AuthMiddleware(middlewares.AuthorizeMiddleware(http.HandlerFunc(h.CreatePost), utils.RoleUser)))
+	mux.Handle("PATCH /posts", middlewares.AuthMiddleware(middlewares.AuthorizeMiddleware(http.HandlerFunc(h.UpdatePost), utils.RoleUser)))
+	mux.Handle("PATCH /posts/{id}", middlewares.AuthMiddleware(middlewares.AuthorizeMiddleware(http.HandlerFunc(h.DeletePost), utils.RoleUser)))
 }
 
 func RegisterAuthRoutes(mux *http.ServeMux, h *AuthHandler) {
@@ -44,15 +46,16 @@ func RegisterAuthRoutes(mux *http.ServeMux, h *AuthHandler) {
 	mux.HandleFunc("POST /reset-password", h.ResetPassword)
 	mux.HandleFunc("POST /logout", h.Logout)
 }
+
 func RegisterCommentsRoutes(mux *http.ServeMux, h *CommentsHandler) {
-	mux.Handle("POST /comments", middlewares.AuthMiddleware(http.HandlerFunc(h.CreateComment)))
-	mux.Handle("PATCH /comments", middlewares.AuthMiddleware(http.HandlerFunc(h.UpdateComment)))
-	mux.Handle("PATCH /comments/{id}", middlewares.AuthMiddleware(http.HandlerFunc(h.DeleteComment)))
+	mux.Handle("POST /comments", middlewares.AuthMiddleware(middlewares.AuthorizeMiddleware(http.HandlerFunc(h.CreateComment), utils.RoleUser)))
+	mux.Handle("PATCH /comments", middlewares.AuthMiddleware(middlewares.AuthorizeMiddleware(http.HandlerFunc(h.UpdateComment), utils.RoleUser)))
+	mux.Handle("PATCH /comments/{id}", middlewares.AuthMiddleware(middlewares.AuthorizeMiddleware(http.HandlerFunc(h.DeleteComment), utils.RoleUser)))
 	mux.HandleFunc("GET /comments/post/{postId}", h.GetCommentsByPost)
 }
 
 func RegisterFollowRoutes(mux *http.ServeMux, h *FollowsHandler) {
-	mux.Handle("POST /follows", middlewares.AuthMiddleware(http.HandlerFunc(h.FollowUser)))
+	mux.Handle("POST /follows", middlewares.AuthMiddleware(middlewares.AuthorizeMiddleware(http.HandlerFunc(h.FollowUser), utils.RoleUser)))
 	mux.Handle("DELETE /follows", middlewares.AuthMiddleware(http.HandlerFunc(h.UnfollowUser)))
 	mux.HandleFunc("GET /follows/followers/{id}", h.GetFollowers)
 	mux.HandleFunc("GET /follows/following/{id}", h.GetFollowing)

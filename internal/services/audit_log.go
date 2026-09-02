@@ -11,12 +11,12 @@ import (
 type EntityName string
 
 const (
-	EntityPost      EntityName = "post"
-	EntityLike      EntityName = "like"
-	EntityRepost    EntityName = "repost"
-	EntityComment   EntityName = "comment"
-	EntityFollow    EntityName = "follow"
-	EntityUser      EntityName = "user"
+	EntityPost         EntityName = "post"
+	EntityLike         EntityName = "like"
+	EntityRepost       EntityName = "repost"
+	EntityComment      EntityName = "comment"
+	EntityFollow       EntityName = "follow"
+	EntityUser         EntityName = "user"
 	EntityNotification EntityName = "notification"
 )
 
@@ -34,17 +34,17 @@ func LogAudit(
 	action Action,
 	entity EntityName,
 	userID uuid.UUID,
-	oldVal interface{},
-	newVal interface{},
+	oldVal any,
+	newVal any,
 ) error {
 	oldJSON, _ := json.Marshal(oldVal)
 	newJSON, _ := json.Marshal(newVal)
 
 	return repo.AddAuditLog(ctx, database.AddAuditLogParams{
-		Action:      string(action),
-		EntityName:  string(entity),
-		OldValue:    oldJSON,
-		NewValue:    newJSON,
-		CreateBy:    pgtype.UUID{Bytes: userID, Valid: true},
+		Action:     string(action),
+		EntityName: string(entity),
+		OldValue:   oldJSON,
+		NewValue:   newJSON,
+		CreateBy:   pgtype.UUID{Bytes: userID, Valid: true},
 	})
 }
