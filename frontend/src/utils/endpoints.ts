@@ -22,4 +22,12 @@ export const endpoints = {
   subscribe: `${WS_BASE_URL}/ws/subscribe`,
   postHub: (postId: string) => `${WS_BASE_URL}/ws/post/${postId}`,
   publish: `${API_BASE_URL}/ws/publish`,
+  admin: {
+    forgotPassword: `${API_BASE_URL}/admin/forgot-password`,
+    resetPassword: `${API_BASE_URL}/admin/reset-password`,
+    login: `${API_BASE_URL}/admin/login`,
+    logout: `${API_BASE_URL}/admin/logout`,
+    statistics: `${API_BASE_URL}/admin/statistics`,
+    users: `${API_BASE_URL}/admin/users`,
+  },
 };

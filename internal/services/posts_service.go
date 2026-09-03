@@ -20,7 +20,7 @@ func NewPostService(pool *pgxpool.Pool) *PostService {
 	return &PostService{repo: database.New(pool), db: pool}
 }
 
-func (s *PostService) GetPosts(ctx context.Context, cursorTime *time.Time, cursorID *uuid.UUID, limit int32) ([]database.GetPostsRow, error) {
+func (s *PostService) GetPosts(ctx context.Context, cursorTime *time.Time, cursorID *uuid.UUID, limit int32, userID *uuid.UUID) ([]database.GetPostsRow, error) {
 	var timestamp pgtype.Timestamptz
 	var id pgtype.UUID
 
@@ -31,17 +31,28 @@ func (s *PostService) GetPosts(ctx context.Context, cursorTime *time.Time, curso
 		id = pgtype.UUID{Bytes: *cursorID, Valid: true}
 	}
 
+	var userIDParam pgtype.UUID
+	if userID != nil {
+		userIDParam = pgtype.UUID{Bytes: *userID, Valid: true}
+	}
+
 	return s.repo.GetPosts(ctx, database.GetPostsParams{
 		Column1: timestamp,
 		Column2: id,
 		Limit:   limit,
+		UserID:  userIDParam,
 	})
 }
 
-func (s *PostService) GetPostsByUser(ctx context.Context, userID uuid.UUID) ([]database.Post, error) {
-	return s.repo.GetPostsByUser(ctx, pgtype.UUID{
-		Bytes: userID,
-		Valid: true,
+func (s *PostService) GetPostsByUser(ctx context.Context, targetUserID uuid.UUID, currentUserID *uuid.UUID) ([]database.GetPostsByUserRow, error) {
+	var currentUserIDParam pgtype.UUID
+	if currentUserID != nil {
+		currentUserIDParam = pgtype.UUID{Bytes: *currentUserID, Valid: true}
+	}
+
+	return s.repo.GetPostsByUser(ctx, database.GetPostsByUserParams{
+		UserID:       pgtype.UUID{Bytes: targetUserID, Valid: true},
+		UserID_2: currentUserIDParam,
 	})
 }
 

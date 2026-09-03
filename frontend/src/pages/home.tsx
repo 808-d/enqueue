@@ -120,6 +120,8 @@ function Mid() {
 							likes={post.likesCount}
 							comments={post.commentsCount}
 							reposts={post.repostsCount}
+							isLiked={post.isLiked}
+							isReposted={post.isReposted}
 							thumbnail={post.thumbnail}
 							onDelete={() => {
 								setPosts((prev) => prev.filter((p) => p.id !== post.id));

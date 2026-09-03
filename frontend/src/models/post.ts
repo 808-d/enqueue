@@ -21,4 +21,18 @@ export type FeedPost = {
   createTime: number | null;
   thumbnail: string | null;
   description: string | null;
+  isLiked: boolean;
+  isReposted: boolean;
+};
+
+// Profile post - for user profile page (no content, updateTime)
+export type ProfilePost = {
+  id: string;
+  title: string | null;
+  thumbnail: string | null;
+  description: string | null;
+  createTime: string | null;
+  status: number;
+  isLiked: boolean;
+  isReposted: boolean;
 };

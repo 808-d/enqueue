@@ -14,6 +14,11 @@ import { useEffect } from "react";
 import { Box } from "@mui/material";
 import ResetPassword from "./pages/resetPassword";
 import Activity from "./pages/activity";
+import ErrorPage from "./pages/ErrorPage";
+import AdminLogin from "./pages/admin/login/login";
+import AdminDashboard from "./pages/admin/dashboard/dashboard";
+import AdminForgotPassword from "./pages/admin/forgot-password/forgotPassword";
+import AdminResetPassword from "./pages/admin/reset-password/resetPassword";
 
 // import Profile from "./pages/profile";
 function App() {
@@ -45,6 +50,11 @@ function App() {
           <Route path="/verify-email-change" element={<VerifyEmailChange />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/activity" element={<Activity />} />
+          <Route path="/error" element={<ErrorPage />} />
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/admin/forgot-password" element={<AdminForgotPassword />} />
+          <Route path="/admin/reset-password" element={<AdminResetPassword />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
         </Routes>
       </BrowserRouter>
     </Box>

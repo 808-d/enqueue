@@ -9,6 +9,7 @@ import (
 
 	"enqueue/internal/dtos/posts"
 	"enqueue/internal/services"
+	"enqueue/internal/utils"
 
 	"github.com/google/uuid"
 )
@@ -44,7 +45,15 @@ func (h *PostsHandler) GetPosts(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	posts, err := h.postService.GetPosts(r.Context(), cursorTime, cursorID, limit)
+	// Extract user ID from JWT cookie if present (optional auth)
+	var userID *uuid.UUID
+	if cookie, err := r.Cookie("token"); err == nil {
+		if claims, err := utils.ValidateToken(cookie.Value); err == nil {
+			userID = &claims.UserID
+		}
+	}
+
+	posts, err := h.postService.GetPosts(r.Context(), cursorTime, cursorID, limit, userID)
 
 	if err != nil {
 		http.Error(w, "failed to get posts", http.StatusInternalServerError)
@@ -56,20 +65,28 @@ func (h *PostsHandler) GetPosts(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *PostsHandler) GetPostsByUser(w http.ResponseWriter, r *http.Request) {
-	userID, err := uuid.Parse(r.PathValue("id"))
+	targetUserID, err := uuid.Parse(r.PathValue("id"))
 	if err != nil {
 		http.Error(w, "invalid user id", http.StatusBadRequest)
 		return
 	}
 
-	post, err := h.postService.GetPostsByUser(r.Context(), userID)
+	// Extract current user ID from JWT cookie if present (optional auth)
+	var currentUserID *uuid.UUID
+	if cookie, err := r.Cookie("token"); err == nil {
+		if claims, err := utils.ValidateToken(cookie.Value); err == nil {
+			currentUserID = &claims.UserID
+		}
+	}
+
+	posts, err := h.postService.GetPostsByUser(r.Context(), targetUserID, currentUserID)
 	if err != nil {
 		http.Error(w, "failed to get posts", http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(post)
+	json.NewEncoder(w).Encode(posts)
 }
 
 func (h *PostsHandler) CreatePost(w http.ResponseWriter, r *http.Request) {

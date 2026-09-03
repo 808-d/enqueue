@@ -26,7 +26,7 @@ import TabContext from "@mui/lab/TabContext";
 import TabList from "@mui/lab/TabList";
 import TabPanel from "@mui/lab/TabPanel";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import type { Post } from "../models/post";
+import type { ProfilePost } from "../models/post";
 import PostCard from "../components/shared/postCard";
 import { useAppTheme } from "../contexts/themeContext";
 import { Link } from "react-router-dom";
@@ -49,7 +49,7 @@ export function Profile() {
   const [searchParams] = useSearchParams();
   const userId = searchParams.get("id");
   const [value, setValue] = useState(1);
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [posts, setPosts] = useState<ProfilePost[]>([]);
   const [profile, setProfile] = useState<ProfileData>();
   const [isFollowing, setIsFollowing] = useState(false);
   const [followersCount, setFollowersCount] = useState(0);
@@ -531,6 +531,7 @@ export function Profile() {
                         description={post.description}
                         status={post.status}
                         updatedAt={post.updateTime}
+                        thumbnail={post.thumbnail}
                         onClick={() => navigate(`/read?id=${post.id}`)}
                         onDelete={() => updatePostStatus(post.id)}
                       />
@@ -587,6 +588,7 @@ export function Profile() {
                         description={post.description}
                         status={post.status}
                         updatedAt={post.updateTime}
+                        thumbnail={post.thumbnail}
                         onDelete={(id) => updatePostStatus(id)}
                       />
                     ))}

@@ -70,6 +70,8 @@ func main() {
 
 	repostsService := services.NewRepostsSerice(pool)
 	repostsHandler := handlers.NewRepostHandler(repostsService)
+	adminService := services.NewAdminService(pool, rdb)
+	adminHandler := handlers.NewAdminHandler(adminService)
 	mux := http.NewServeMux()
 	handlers.RegisterUserRoutes(mux, usersHandler)
 	handlers.RegisterPostRoutes(mux, postsHandler)
@@ -79,6 +81,7 @@ func main() {
 	handlers.RegisterLikeRoutes(mux, likeHandler)
 	handlers.RegisterNotificationRoutes(mux, notisHandler)
 	handlers.RegisterRepostRoutes(mux, repostsHandler)
+	handlers.RegisterAdminRoutes(mux, adminHandler)
 
 	handlers.WsRoutes(mux, notiHub, postHub)
 	// middlewares

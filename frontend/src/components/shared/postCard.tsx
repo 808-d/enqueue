@@ -18,7 +18,7 @@ import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutlined";
 import RepeatIcon from "@mui/icons-material/Repeat";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useEditor } from "@tiptap/react";
 
@@ -42,6 +42,8 @@ type PostCardProps = {
 	likes?: number;
 	comments?: number;
 	reposts?: number;
+	isLiked?: boolean;
+	isReposted?: boolean;
 
 	onClick?: () => void;
 	onDelete: (id: string) => void;
@@ -72,6 +74,8 @@ export default function PostCard({
 	likes = 0,
 	comments = 0,
 	reposts = 0,
+	isLiked = false,
+	isReposted = false,
 	onClick,
 	onDelete,
 }: PostCardProps) {
@@ -80,7 +84,7 @@ export default function PostCard({
 
 	const statusInfo = statusMap[status as keyof typeof statusMap];
 
-	const { likePost, unlikePost, getLikeStatus } = useLikes();
+	const { likePost, unlikePost } = useLikes();
 
 	const { repost, unrepost } = usePosts();
 
@@ -89,8 +93,8 @@ export default function PostCard({
 	const [likeCount, setLikeCount] = useState(likes);
 	const [repostCount, setRepostCount] = useState(reposts);
 
-	const [isLiked, setIsLiked] = useState(false);
-	const [isReposted, setIsReposted] = useState(false);
+	const [liked, setLiked] = useState(isLiked);
+	const [reposted, setReposted] = useState(isReposted);
 
 	const [open, setOpen] = useState(false);
 
@@ -111,36 +115,6 @@ export default function PostCard({
 	});
 
 	/*
-	 * Get current like status.
-	 */
-	useEffect(() => {
-		if (status === 1) {
-			return;
-		}
-
-		const loadLikeStatus = async () => {
-			try {
-				const data = await getLikeStatus(id);
-
-				if (data?.liked !== undefined) {
-					setIsLiked(data.liked);
-				}
-
-				if (data?.likeCount !== undefined) {
-					setLikeCount(data.likeCount);
-				}
-			} catch (err) {
-				console.error(
-					"Failed to get like status:",
-					err,
-				);
-			}
-		};
-
-		loadLikeStatus();
-	}, [id, status, getLikeStatus]);
-
-	/*
 	 * Like / unlike.
 	 */
 	const handleLike = async (
@@ -149,15 +123,15 @@ export default function PostCard({
 		event.stopPropagation();
 
 		try {
-			if (isLiked) {
+			if (liked) {
 				await unlikePost(id);
 
-				setIsLiked(false);
+				setLiked(false);
 				setLikeCount((prev) => Math.max(0, prev - 1));
 			} else {
 				await likePost(id);
 
-				setIsLiked(true);
+				setLiked(true);
 				setLikeCount((prev) => prev + 1);
 			}
 		} catch (err) {
@@ -177,17 +151,17 @@ export default function PostCard({
 		event.stopPropagation();
 
 		try {
-			if (isReposted) {
+			if (reposted) {
 				await unrepost(id);
 
-				setIsReposted(false);
+				setReposted(false);
 				setRepostCount((prev) =>
 					Math.max(0, prev - 1),
 				);
 			} else {
 				await repost(id);
 
-				setIsReposted(true);
+				setReposted(true);
 				setRepostCount((prev) => prev + 1);
 			}
 		} catch (err) {
@@ -477,6 +451,31 @@ export default function PostCard({
 							</Box>
 						</Box>
 
+						{thumbnail && (
+							<Box
+								sx={{
+									width: "100%",
+									aspectRatio: "16 / 9",
+									overflow: "hidden",
+									borderRadius: 2,
+									mb: 1.5,
+									bgcolor: catppuccin.surface0,
+								}}
+							>
+								<Box
+									component="img"
+									src={thumbnail}
+									alt="Post thumbnail"
+									sx={{
+										width: "100%",
+										height: "100%",
+										display: "block",
+										objectFit: "cover",
+									}}
+								/>
+							</Box>
+						)}
+
 						{/* Description */}
 						{description && (
 							<Typography
@@ -497,18 +496,6 @@ export default function PostCard({
 								}}
 							>
 								{description}
-							</Typography>
-						)}
-
-						{thumbnail && (
-							<Typography
-								sx={{ mt: 1 }}
-							>
-								<img
-									src={thumbnail}
-									alt="Post thumbnail"
-									sx={{ width: 100, height: 100, borderRadius: 2 }}
-								/>
 							</Typography>
 						)}
 
@@ -536,12 +523,12 @@ export default function PostCard({
 											"center",
 										gap: 0.5,
 
-										color: isLiked
+										color: liked
 											? catppuccin.red
 											: catppuccin.subtext0,
 									}}
 								>
-									{isLiked ? (
+									{liked ? (
 										<FavoriteIcon fontSize="small" />
 									) : (
 										<FavoriteBorderIcon fontSize="small" />
@@ -587,7 +574,7 @@ export default function PostCard({
 											"center",
 										gap: 0.5,
 
-										color: isReposted
+										color: reposted
 											? catppuccin.green
 											: catppuccin.subtext0,
 									}}

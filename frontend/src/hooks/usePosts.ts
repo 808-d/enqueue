@@ -3,9 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { endpoints } from "../utils/endpoints";
 import type { PostData } from "../models/postData";
 import type { FeedPost } from "../models/post";
+import { useAuth } from "../contexts/authContext";
 
 export function usePosts() {
 	const navigate = useNavigate();
+	const { user } = useAuth();
 
 	async function getPostsByUser(userId: string) {
 		return await axios.get(`${endpoints.posts}/user/${userId}`, {
@@ -18,6 +20,7 @@ export function usePosts() {
 		if (cursorTime) params.append("cursor_time", cursorTime);
 		if (cursorId) params.append("cursor_id", cursorId);
 		params.append("limit", limit.toString());
+
 
 		const response = await axios.get<FeedPost[]>(`${endpoints.posts}?${params.toString()}`, {
 			withCredentials: true,

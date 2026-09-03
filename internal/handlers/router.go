@@ -29,7 +29,7 @@ func RegisterRepostRoutes(mux *http.ServeMux, h *RepostHandler) {
 }
 
 func RegisterPostRoutes(mux *http.ServeMux, h *PostsHandler) {
-	mux.HandleFunc("GET /posts", h.GetPosts)
+	mux.Handle("GET /posts", http.HandlerFunc(h.GetPosts))
 	mux.HandleFunc("GET /posts/user/{id}", h.GetPostsByUser)
 	mux.HandleFunc("GET /posts/{id}", h.GetPostById)
 	mux.Handle("POST /posts", middlewares.AuthMiddleware(middlewares.AuthorizeMiddleware(http.HandlerFunc(h.CreatePost), utils.RoleUser)))
