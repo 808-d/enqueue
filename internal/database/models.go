@@ -9,90 +9,92 @@ import (
 )
 
 type AuditLog struct {
-	ID         pgtype.UUID
-	Action     string
-	EntityName string
-	OldValue   pgtype.Text
-	NewValue   pgtype.Text
-	CreateBy   pgtype.UUID
-	CreateTime pgtype.Timestamp
+	ID         pgtype.UUID      `json:"id"`
+	Action     string           `json:"action"`
+	EntityName string           `json:"entityName"`
+	OldValue   []byte           `json:"oldValue"`
+	NewValue   []byte           `json:"newValue"`
+	CreateBy   pgtype.UUID      `json:"createBy"`
+	CreateTime pgtype.Timestamp `json:"createTime"`
 }
 
 type Comment struct {
-	IsDelete   bool
-	CreateTime pgtype.Timestamp
-	UpdateTime pgtype.Timestamp
-	ID         pgtype.UUID
-	UserID     pgtype.UUID
-	PostID     pgtype.UUID
-	Content    string
-	ReplyTo    pgtype.UUID
+	IsDelete   bool             `json:"isDelete"`
+	CreateTime pgtype.Timestamp `json:"createTime"`
+	UpdateTime pgtype.Timestamp `json:"updateTime"`
+	ID         pgtype.UUID      `json:"id"`
+	UserID     pgtype.UUID      `json:"userId"`
+	PostID     pgtype.UUID      `json:"postId"`
+	Content    string           `json:"content"`
+	ReplyTo    pgtype.UUID      `json:"replyTo"`
 }
 
 type Compose struct {
-	UserID     pgtype.UUID
-	PostID     pgtype.UUID
-	CreateTime pgtype.Timestamp
-	Role       string
-}
-
-type EmailVerification struct {
-	ID        pgtype.UUID
-	UserID    pgtype.UUID
-	Token     string
-	ExpiresAt pgtype.Timestamptz
-	CreatedAt pgtype.Timestamptz
+	UserID     pgtype.UUID      `json:"userId"`
+	PostID     pgtype.UUID      `json:"postId"`
+	CreateTime pgtype.Timestamp `json:"createTime"`
+	Role       string           `json:"role"`
 }
 
 type Follow struct {
-	FollowerID  pgtype.UUID
-	FollowingID pgtype.UUID
-	CreateTime  pgtype.Timestamp
+	FollowerID  pgtype.UUID      `json:"followerId"`
+	FollowingID pgtype.UUID      `json:"followingId"`
+	CreateTime  pgtype.Timestamp `json:"createTime"`
 }
 
 type Like struct {
-	UserID     pgtype.UUID
-	PostID     pgtype.UUID
-	CreateTime pgtype.Timestamp
+	UserID     pgtype.UUID      `json:"userId"`
+	PostID     pgtype.UUID      `json:"postId"`
+	CreateTime pgtype.Timestamp `json:"createTime"`
+}
+
+type Notification struct {
+	ID          pgtype.UUID        `json:"id"`
+	RecipientID pgtype.UUID        `json:"recipientId"`
+	ActorID     pgtype.UUID        `json:"actorId"`
+	Type        string             `json:"type"`
+	EntityID    pgtype.UUID        `json:"entityId"`
+	ReadAt      pgtype.Timestamptz `json:"readAt"`
+	CreateTime  pgtype.Timestamptz `json:"createTime"`
 }
 
 type Post struct {
-	CreateTime  pgtype.Timestamp
-	UpdateTime  pgtype.Timestamp
-	ID          pgtype.UUID
-	Title       pgtype.Text
-	Content     pgtype.Text
-	Thumbnail   pgtype.Text
-	Description pgtype.Text
-	Status      int32
+	CreateTime  pgtype.Timestamp `json:"createTime"`
+	UpdateTime  pgtype.Timestamp `json:"updateTime"`
+	ID          pgtype.UUID      `json:"id"`
+	Title       pgtype.Text      `json:"title"`
+	Content     pgtype.Text      `json:"content"`
+	Thumbnail   pgtype.Text      `json:"thumbnail"`
+	Description pgtype.Text      `json:"description"`
+	Status      int32            `json:"status"`
 }
 
 type Repost struct {
-	UserID pgtype.UUID
-	PostID pgtype.UUID
+	UserID pgtype.UUID `json:"userId"`
+	PostID pgtype.UUID `json:"postId"`
 }
 
 type SoftDelete struct {
-	IsDelete bool
+	IsDelete bool `json:"isDelete"`
 }
 
 type TimeLog struct {
-	CreateTime pgtype.Timestamp
-	UpdateTime pgtype.Timestamp
+	CreateTime pgtype.Timestamp `json:"createTime"`
+	UpdateTime pgtype.Timestamp `json:"updateTime"`
 }
 
 type User struct {
-	IsDelete      bool
-	CreateTime    pgtype.Timestamp
-	UpdateTime    pgtype.Timestamp
-	ID            pgtype.UUID
-	Username      string
-	Email         string
-	Avatar        pgtype.Text
-	Password      pgtype.Text
-	Role          string
-	EmailVerified bool
-	Bio           pgtype.Text
-	Name          pgtype.Text
-	PendingEmail  pgtype.Text
+	IsDelete      bool             `json:"isDelete"`
+	CreateTime    pgtype.Timestamp `json:"createTime"`
+	UpdateTime    pgtype.Timestamp `json:"updateTime"`
+	ID            pgtype.UUID      `json:"id"`
+	Username      string           `json:"username"`
+	Email         string           `json:"email"`
+	Avatar        pgtype.Text      `json:"avatar"`
+	Password      pgtype.Text      `json:"password"`
+	Role          string           `json:"role"`
+	EmailVerified bool             `json:"emailVerified"`
+	Bio           pgtype.Text      `json:"bio"`
+	Name          pgtype.Text      `json:"name"`
+	PendingEmail  pgtype.Text      `json:"pendingEmail"`
 }

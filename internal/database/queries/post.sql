@@ -31,7 +31,22 @@ WHERE id = $1
 RETURNING *;
 
 -- name: GetPostsByUser :many
-SELECT p.* FROM posts p
+SELECT p.id,p.title,p.description,p.thumbnail,p.create_time,p.update_time,p.status,
+    EXISTS (
+        SELECT 1
+        FROM likes l2
+        WHERE l2.post_id = p.id
+          AND l2.user_id = $2
+    ) AS is_liked,
+
+    EXISTS (
+        SELECT 1
+        FROM reposts rp2
+        WHERE rp2.post_id = p.id
+          AND rp2.user_id = $2
+    ) AS is_reposted
+
+FROM posts p
 INNER JOIN composes c 
 ON p.id = c.post_id 
 WHERE c.user_id  = $1 AND p.status <> 0
@@ -39,3 +54,86 @@ ORDER BY p.id, p.create_time;
 
 -- name: GetPostById :one
 SELECT * FROM POSTS WHERE Id = $1 AND STATUS <> 0;
+
+-- name: GetPostWithOwner :one
+SELECT p.*, c.user_id
+FROM posts p
+INNER JOIN composes c ON p.id = c.post_id
+WHERE p.id = $1 AND p.status <> 0;
+
+
+-- name: GetPosts :many
+SELECT
+    p.id,
+    p.title,
+    p.description,
+    p.thumbnail,
+    EXTRACT(EPOCH FROM p.create_time)::bigint AS create_time,
+    u.username,
+    u.avatar,
+    COALESCE(l1.likes_count, 0) AS likes_count,
+    COALESCE(rp1.reposts_count, 0) AS reposts_count,
+    COALESCE(cmt.comments_count, 0) AS comments_count,
+    ( COALESCE(l1.likes_count, 0) * 1 + COALESCE(cmt.comments_count, 0) * 5 + COALESCE(rp1.reposts_count, 0) * 10 ) AS score,
+    EXISTS (
+        SELECT 1
+        FROM likes l2
+        WHERE l2.post_id = p.id
+          AND l2.user_id = $4
+    ) AS is_liked,
+
+    EXISTS (
+        SELECT 1
+        FROM reposts rp2
+        WHERE rp2.post_id = p.id
+          AND rp2.user_id = $4
+    ) AS is_reposted
+
+FROM posts p
+
+INNER JOIN composes c
+    ON p.id = c.post_id
+
+INNER JOIN users u
+    ON c.user_id = u.id
+
+LEFT JOIN (
+    SELECT
+        post_id,
+        COUNT(*) AS likes_count
+    FROM likes
+    GROUP BY post_id
+) l1
+    ON p.id = l1.post_id
+
+LEFT JOIN (
+    SELECT
+        post_id,
+        COUNT(*) AS reposts_count
+    FROM reposts
+    GROUP BY post_id
+) rp1
+    ON p.id = rp1.post_id
+
+LEFT JOIN (
+    SELECT
+        post_id,
+        COUNT(*) AS comments_count
+    FROM comments
+    GROUP BY post_id
+) cmt
+    ON p.id = cmt.post_id
+
+WHERE p.status <> 0
+  AND (
+      $1::timestamptz IS NULL
+      OR $2::uuid IS NULL
+      OR p.create_time < $1
+      OR (
+          p.create_time = $1
+          AND p.id < $2
+      )
+  )
+
+ORDER BY score DESC, p.id DESC
+LIMIT $3;

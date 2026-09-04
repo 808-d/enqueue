@@ -40,8 +40,8 @@ ON CONFLICT DO NOTHING
 `
 
 type FollowUserParams struct {
-	FollowerID  pgtype.UUID
-	FollowingID pgtype.UUID
+	FollowerID  pgtype.UUID `json:"followerId"`
+	FollowingID pgtype.UUID `json:"followingId"`
 }
 
 func (q *Queries) FollowUser(ctx context.Context, arg FollowUserParams) error {
@@ -138,8 +138,8 @@ SELECT EXISTS (
 `
 
 type IsFollowingParams struct {
-	FollowerID  pgtype.UUID
-	FollowingID pgtype.UUID
+	FollowerID  pgtype.UUID `json:"followerId"`
+	FollowingID pgtype.UUID `json:"followingId"`
 }
 
 func (q *Queries) IsFollowing(ctx context.Context, arg IsFollowingParams) (bool, error) {
@@ -154,8 +154,8 @@ DELETE FROM follows WHERE follower_id = $1 AND following_id = $2
 `
 
 type UnfollowUserParams struct {
-	FollowerID  pgtype.UUID
-	FollowingID pgtype.UUID
+	FollowerID  pgtype.UUID `json:"followerId"`
+	FollowingID pgtype.UUID `json:"followingId"`
 }
 
 func (q *Queries) UnfollowUser(ctx context.Context, arg UnfollowUserParams) error {

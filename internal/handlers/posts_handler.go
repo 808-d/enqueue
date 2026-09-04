@@ -2,10 +2,14 @@ package handlers
 
 import (
 	"encoding/json"
-	"enqueue/internal/dtos/posts"
-	"enqueue/internal/services"
 	"log"
 	"net/http"
+	"strconv"
+	"time"
+
+	"enqueue/internal/dtos/posts"
+	"enqueue/internal/services"
+	"enqueue/internal/utils"
 
 	"github.com/google/uuid"
 )
@@ -19,31 +23,75 @@ func NewPostsHandler(postService *services.PostService) *PostsHandler {
 }
 
 func (h *PostsHandler) GetPosts(w http.ResponseWriter, r *http.Request) {
+	var cursorTime *time.Time
+	var cursorID *uuid.UUID
 
+	if timeStr := r.URL.Query().Get("cursor_time"); timeStr != "" {
+		if unixSec, err := strconv.ParseInt(timeStr, 10, 64); err == nil {
+			t := time.Unix(unixSec, 0)
+			cursorTime = &t
+		}
+	}
+	if idStr := r.URL.Query().Get("cursor_id"); idStr != "" {
+		if id, err := uuid.Parse(idStr); err == nil {
+			cursorID = &id
+		}
+	}
+
+	limit := int32(20)
+	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
+		if l, err := strconv.ParseInt(limitStr, 10, 32); err == nil && l > 0 && l <= 100 {
+			limit = int32(l)
+		}
+	}
+
+	// Extract user ID from JWT cookie if present (optional auth)
+	var userID *uuid.UUID
+	if cookie, err := r.Cookie("token"); err == nil {
+		if claims, err := utils.ValidateToken(cookie.Value); err == nil {
+			userID = &claims.UserID
+		}
+	}
+
+	posts, err := h.postService.GetPosts(r.Context(), cursorTime, cursorID, limit, userID)
+
+	if err != nil {
+		http.Error(w, "failed to get posts", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(posts)
 }
+
 func (h *PostsHandler) GetPostsByUser(w http.ResponseWriter, r *http.Request) {
-	userID, err := uuid.Parse(r.PathValue("id"))
+	targetUserID, err := uuid.Parse(r.PathValue("id"))
 	if err != nil {
 		http.Error(w, "invalid user id", http.StatusBadRequest)
 		return
 	}
 
-	post, err := h.postService.GetPostsByUser(r.Context(), userID)
+	// Extract current user ID from JWT cookie if present (optional auth)
+	var currentUserID *uuid.UUID
+	if cookie, err := r.Cookie("token"); err == nil {
+		if claims, err := utils.ValidateToken(cookie.Value); err == nil {
+			currentUserID = &claims.UserID
+		}
+	}
+
+	posts, err := h.postService.GetPostsByUser(r.Context(), targetUserID, currentUserID)
 	if err != nil {
-		http.Error(w, "failed to create post", http.StatusInternalServerError)
+		http.Error(w, "failed to get posts", http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(post)
+	json.NewEncoder(w).Encode(posts)
 }
 
 func (h *PostsHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
-	userId, ok := r.Context().Value("id").(uuid.UUID)
-	if !ok {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
-		return
-	}
+	userId := r.Context().Value("id").(uuid.UUID)
+
 	post, err := h.postService.CreatePost(r.Context(), userId)
 	if err != nil {
 		http.Error(w, "failed to create post", http.StatusInternalServerError)
@@ -62,7 +110,7 @@ func (h *PostsHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updatedPost, err := h.postService.UpdatePost(r.Context(), req.ID, req.Title, req.Content)
+	updatedPost, err := h.postService.UpdatePost(r.Context(), req.ID, req.Title, req.Content, req.Description, req.ThumbnailUrl)
 	if err != nil {
 		http.Error(w, "failed to update post", http.StatusInternalServerError)
 		return
@@ -71,26 +119,22 @@ func (h *PostsHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(updatedPost)
 }
+
 func (h *PostsHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 	postId, err := uuid.Parse(r.PathValue("id"))
 	if err != nil {
-		http.Error(w, "invalid user id", http.StatusBadRequest)
+		http.Error(w, "invalid post id", http.StatusBadRequest)
 		return
 	}
 
 	post, err := h.postService.DeletePost(r.Context(), postId)
 	if err != nil {
-		log.Printf("failed to delete post %s: %v", postId, err)
 		http.Error(w, "failed to delete post", http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-
-	if err := json.NewEncoder(w).Encode(post); err != nil {
-		return
-	}
+	json.NewEncoder(w).Encode(post)
 }
 
 func (h *PostsHandler) GetPostById(w http.ResponseWriter, r *http.Request) {
@@ -108,7 +152,7 @@ func (h *PostsHandler) GetPostById(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := posts.PostResponse{
-		Post:     post,
+		Post:     posts.NewPostDTO(post),
 		Comments: comments,
 	}
 
@@ -129,14 +173,10 @@ func (h *PostsHandler) UpdatePostStatus(w http.ResponseWriter, r *http.Request) 
 
 	post, err := h.postService.UpdatePostStatus(r.Context(), postId)
 	if err != nil {
-		http.Error(w, "failed to delete post", http.StatusInternalServerError)
+		http.Error(w, "failed to update post status", http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-
-	if err := json.NewEncoder(w).Encode(post); err != nil {
-		return
-	}
+	json.NewEncoder(w).Encode(post)
 }

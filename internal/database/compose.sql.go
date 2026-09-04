@@ -18,8 +18,8 @@ VALUES($1, $2)
 `
 
 type CreateComposeParams struct {
-	UserID pgtype.UUID
-	PostID pgtype.UUID
+	UserID pgtype.UUID `json:"userId"`
+	PostID pgtype.UUID `json:"postId"`
 }
 
 func (q *Queries) CreateCompose(ctx context.Context, arg CreateComposeParams) error {

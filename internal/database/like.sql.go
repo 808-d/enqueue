@@ -11,6 +11,19 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countLikes = `-- name: CountLikes :one
+SELECT COUNT(*)
+FROM likes
+WHERE post_id = $1
+`
+
+func (q *Queries) CountLikes(ctx context.Context, postID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countLikes, postID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const deleteLike = `-- name: DeleteLike :one
 DELETE FROM likes
 WHERE user_id = $1
@@ -19,12 +32,31 @@ WHERE user_id = $1
 `
 
 type DeleteLikeParams struct {
-	UserID pgtype.UUID
-	PostID pgtype.UUID
+	UserID pgtype.UUID `json:"userId"`
+	PostID pgtype.UUID `json:"postId"`
 }
 
 func (q *Queries) DeleteLike(ctx context.Context, arg DeleteLikeParams) (Like, error) {
 	row := q.db.QueryRow(ctx, deleteLike, arg.UserID, arg.PostID)
+	var i Like
+	err := row.Scan(&i.UserID, &i.PostID, &i.CreateTime)
+	return i, err
+}
+
+const getLike = `-- name: GetLike :one
+SELECT user_id, post_id, create_time
+FROM likes
+WHERE user_id = $1
+  AND post_id = $2
+`
+
+type GetLikeParams struct {
+	UserID pgtype.UUID `json:"userId"`
+	PostID pgtype.UUID `json:"postId"`
+}
+
+func (q *Queries) GetLike(ctx context.Context, arg GetLikeParams) (Like, error) {
+	row := q.db.QueryRow(ctx, getLike, arg.UserID, arg.PostID)
 	var i Like
 	err := row.Scan(&i.UserID, &i.PostID, &i.CreateTime)
 	return i, err
@@ -38,8 +70,8 @@ VALUES($1, $2, now())
 `
 
 type LikeParams struct {
-	UserID pgtype.UUID
-	PostID pgtype.UUID
+	UserID pgtype.UUID `json:"userId"`
+	PostID pgtype.UUID `json:"postId"`
 }
 
 func (q *Queries) Like(ctx context.Context, arg LikeParams) (Like, error) {

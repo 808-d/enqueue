@@ -59,32 +59,240 @@ func (q *Queries) GetPostById(ctx context.Context, id pgtype.UUID) (Post, error)
 	return i, err
 }
 
+const getPostWithOwner = `-- name: GetPostWithOwner :one
+SELECT p.create_time, p.update_time, p.id, p.title, p.content, p.thumbnail, p.description, p.status, c.user_id
+FROM posts p
+INNER JOIN composes c ON p.id = c.post_id
+WHERE p.id = $1 AND p.status <> 0
+`
+
+type GetPostWithOwnerRow struct {
+	CreateTime  pgtype.Timestamp `json:"createTime"`
+	UpdateTime  pgtype.Timestamp `json:"updateTime"`
+	ID          pgtype.UUID      `json:"id"`
+	Title       pgtype.Text      `json:"title"`
+	Content     pgtype.Text      `json:"content"`
+	Thumbnail   pgtype.Text      `json:"thumbnail"`
+	Description pgtype.Text      `json:"description"`
+	Status      int32            `json:"status"`
+	UserID      pgtype.UUID      `json:"userId"`
+}
+
+func (q *Queries) GetPostWithOwner(ctx context.Context, id pgtype.UUID) (GetPostWithOwnerRow, error) {
+	row := q.db.QueryRow(ctx, getPostWithOwner, id)
+	var i GetPostWithOwnerRow
+	err := row.Scan(
+		&i.CreateTime,
+		&i.UpdateTime,
+		&i.ID,
+		&i.Title,
+		&i.Content,
+		&i.Thumbnail,
+		&i.Description,
+		&i.Status,
+		&i.UserID,
+	)
+	return i, err
+}
+
+const getPosts = `-- name: GetPosts :many
+SELECT
+    p.id,
+    p.title,
+    p.description,
+    p.thumbnail,
+    EXTRACT(EPOCH FROM p.create_time)::bigint AS create_time,
+    u.username,
+    u.avatar,
+    COALESCE(l1.likes_count, 0) AS likes_count,
+    COALESCE(rp1.reposts_count, 0) AS reposts_count,
+    COALESCE(cmt.comments_count, 0) AS comments_count,
+    ( COALESCE(l1.likes_count, 0) * 1 + COALESCE(cmt.comments_count, 0) * 5 + COALESCE(rp1.reposts_count, 0) * 10 ) AS score,
+    EXISTS (
+        SELECT 1
+        FROM likes l2
+        WHERE l2.post_id = p.id
+          AND l2.user_id = $4
+    ) AS is_liked,
+
+    EXISTS (
+        SELECT 1
+        FROM reposts rp2
+        WHERE rp2.post_id = p.id
+          AND rp2.user_id = $4
+    ) AS is_reposted
+
+FROM posts p
+
+INNER JOIN composes c
+    ON p.id = c.post_id
+
+INNER JOIN users u
+    ON c.user_id = u.id
+
+LEFT JOIN (
+    SELECT
+        post_id,
+        COUNT(*) AS likes_count
+    FROM likes
+    GROUP BY post_id
+) l1
+    ON p.id = l1.post_id
+
+LEFT JOIN (
+    SELECT
+        post_id,
+        COUNT(*) AS reposts_count
+    FROM reposts
+    GROUP BY post_id
+) rp1
+    ON p.id = rp1.post_id
+
+LEFT JOIN (
+    SELECT
+        post_id,
+        COUNT(*) AS comments_count
+    FROM comments
+    GROUP BY post_id
+) cmt
+    ON p.id = cmt.post_id
+
+WHERE p.status <> 0
+  AND (
+      $1::timestamptz IS NULL
+      OR $2::uuid IS NULL
+      OR p.create_time < $1
+      OR (
+          p.create_time = $1
+          AND p.id < $2
+      )
+  )
+
+ORDER BY score DESC, p.id DESC
+LIMIT $3
+`
+
+type GetPostsParams struct {
+	Column1 pgtype.Timestamptz `json:"column1"`
+	Column2 pgtype.UUID        `json:"column2"`
+	Limit   int32              `json:"limit"`
+	UserID  pgtype.UUID        `json:"userId"`
+}
+
+type GetPostsRow struct {
+	ID            pgtype.UUID `json:"id"`
+	Title         pgtype.Text `json:"title"`
+	Description   pgtype.Text `json:"description"`
+	Thumbnail     pgtype.Text `json:"thumbnail"`
+	CreateTime    int64       `json:"createTime"`
+	Username      string      `json:"username"`
+	Avatar        pgtype.Text `json:"avatar"`
+	LikesCount    int64       `json:"likesCount"`
+	RepostsCount  int64       `json:"repostsCount"`
+	CommentsCount int64       `json:"commentsCount"`
+	Score         int32       `json:"score"`
+	IsLiked       bool        `json:"isLiked"`
+	IsReposted    bool        `json:"isReposted"`
+}
+
+func (q *Queries) GetPosts(ctx context.Context, arg GetPostsParams) ([]GetPostsRow, error) {
+	rows, err := q.db.Query(ctx, getPosts,
+		arg.Column1,
+		arg.Column2,
+		arg.Limit,
+		arg.UserID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetPostsRow
+	for rows.Next() {
+		var i GetPostsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Description,
+			&i.Thumbnail,
+			&i.CreateTime,
+			&i.Username,
+			&i.Avatar,
+			&i.LikesCount,
+			&i.RepostsCount,
+			&i.CommentsCount,
+			&i.Score,
+			&i.IsLiked,
+			&i.IsReposted,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getPostsByUser = `-- name: GetPostsByUser :many
-SELECT p.create_time, p.update_time, p.id, p.title, p.content, p.thumbnail, p.description, p.status FROM posts p
+SELECT p.id,p.title,p.description,p.thumbnail,p.create_time,p.update_time,p.status,
+    EXISTS (
+        SELECT 1
+        FROM likes l2
+        WHERE l2.post_id = p.id
+          AND l2.user_id = $2
+    ) AS is_liked,
+
+    EXISTS (
+        SELECT 1
+        FROM reposts rp2
+        WHERE rp2.post_id = p.id
+          AND rp2.user_id = $2
+    ) AS is_reposted
+
+FROM posts p
 INNER JOIN composes c 
 ON p.id = c.post_id 
 WHERE c.user_id  = $1 AND p.status <> 0
 ORDER BY p.id, p.create_time
 `
 
-func (q *Queries) GetPostsByUser(ctx context.Context, userID pgtype.UUID) ([]Post, error) {
-	rows, err := q.db.Query(ctx, getPostsByUser, userID)
+type GetPostsByUserParams struct {
+	UserID   pgtype.UUID `json:"userId"`
+	UserID_2 pgtype.UUID `json:"userId2"`
+}
+
+type GetPostsByUserRow struct {
+	ID          pgtype.UUID      `json:"id"`
+	Title       pgtype.Text      `json:"title"`
+	Description pgtype.Text      `json:"description"`
+	Thumbnail   pgtype.Text      `json:"thumbnail"`
+	CreateTime  pgtype.Timestamp `json:"createTime"`
+	UpdateTime  pgtype.Timestamp `json:"updateTime"`
+	Status      int32            `json:"status"`
+	IsLiked     bool             `json:"isLiked"`
+	IsReposted  bool             `json:"isReposted"`
+}
+
+func (q *Queries) GetPostsByUser(ctx context.Context, arg GetPostsByUserParams) ([]GetPostsByUserRow, error) {
+	rows, err := q.db.Query(ctx, getPostsByUser, arg.UserID, arg.UserID_2)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Post
+	var items []GetPostsByUserRow
 	for rows.Next() {
-		var i Post
+		var i GetPostsByUserRow
 		if err := rows.Scan(
-			&i.CreateTime,
-			&i.UpdateTime,
 			&i.ID,
 			&i.Title,
-			&i.Content,
-			&i.Thumbnail,
 			&i.Description,
+			&i.Thumbnail,
+			&i.CreateTime,
+			&i.UpdateTime,
 			&i.Status,
+			&i.IsLiked,
+			&i.IsReposted,
 		); err != nil {
 			return nil, err
 		}
@@ -109,11 +317,11 @@ RETURNING create_time, update_time, id, title, content, thumbnail, description, 
 `
 
 type UpdatePostParams struct {
-	ID          pgtype.UUID
-	Title       pgtype.Text
-	Content     pgtype.Text
-	Description pgtype.Text
-	Thumbnail   pgtype.Text
+	ID          pgtype.UUID `json:"id"`
+	Title       pgtype.Text `json:"title"`
+	Content     pgtype.Text `json:"content"`
+	Description pgtype.Text `json:"description"`
+	Thumbnail   pgtype.Text `json:"thumbnail"`
 }
 
 func (q *Queries) UpdatePost(ctx context.Context, arg UpdatePostParams) (Post, error) {
@@ -148,8 +356,8 @@ RETURNING create_time, update_time, id, title, content, thumbnail, description, 
 `
 
 type UpdatePostStatusParams struct {
-	ID     pgtype.UUID
-	Status int32
+	ID     pgtype.UUID `json:"id"`
+	Status int32       `json:"status"`
 }
 
 func (q *Queries) UpdatePostStatus(ctx context.Context, arg UpdatePostStatusParams) (Post, error) {

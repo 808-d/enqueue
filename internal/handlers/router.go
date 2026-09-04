@@ -3,23 +3,38 @@ package handlers
 
 import (
 	"enqueue/internal/middlewares"
+	"enqueue/internal/utils"
+	"enqueue/internal/ws"
 	"net/http"
 )
 
 func RegisterUserRoutes(mux *http.ServeMux, h *UsersHandler) {
 	mux.HandleFunc("GET /users", h.GetUsers)
-	mux.HandleFunc("PATCH /users", h.UpdateUser)
-	mux.HandleFunc("DELETE /users", h.DeleteUser)
+	mux.Handle("PATCH /users", middlewares.AuthMiddleware(middlewares.AuthorizeMiddleware(http.HandlerFunc(h.UpdateUser), utils.RoleUser)))
+	mux.Handle("DELETE /users", middlewares.AuthMiddleware(http.HandlerFunc(h.DeleteUser)))
+	mux.Handle("GET /users/{id}", middlewares.AuthMiddleware(http.HandlerFunc(h.GetUserById)))
 	mux.HandleFunc("GET /me", h.Me)
 	mux.Handle("PATCH /password", middlewares.AuthMiddleware(http.HandlerFunc(h.ChangePassword)))
 }
+
+func RegisterLikeRoutes(mux *http.ServeMux, h *LikeHandler) {
+	mux.Handle("POST /posts/like/{postId}", middlewares.AuthMiddleware(http.HandlerFunc(h.LikePost)))
+	mux.Handle("DELETE /posts/like/{postId}", middlewares.AuthMiddleware(http.HandlerFunc(h.UnlikePost)))
+	mux.Handle("GET /posts/like/{postId}", middlewares.AuthMiddleware(http.HandlerFunc(h.GetLikeStatus)))
+}
+
+func RegisterRepostRoutes(mux *http.ServeMux, h *RepostHandler) {
+	mux.Handle("POST /posts/repost/{postId}", middlewares.AuthMiddleware(http.HandlerFunc(h.Repost)))
+	mux.Handle("DELETE /posts/repost/{postId}", middlewares.AuthMiddleware(http.HandlerFunc(h.UnRepost)))
+}
+
 func RegisterPostRoutes(mux *http.ServeMux, h *PostsHandler) {
-	mux.HandleFunc("GET /posts", h.GetPosts)
-	mux.HandleFunc("GET /posts/p/{id}", h.GetPostsByUser)
+	mux.Handle("GET /posts", http.HandlerFunc(h.GetPosts))
+	mux.HandleFunc("GET /posts/user/{id}", h.GetPostsByUser)
 	mux.HandleFunc("GET /posts/{id}", h.GetPostById)
-	mux.Handle("POST /posts", middlewares.AuthMiddleware(http.HandlerFunc(h.CreatePost)))
-	mux.Handle("PATCH /posts", middlewares.AuthMiddleware(http.HandlerFunc(h.UpdatePost)))
-	mux.Handle("PATCH /posts/{id}", middlewares.AuthMiddleware(http.HandlerFunc(h.DeletePost)))
+	mux.Handle("POST /posts", middlewares.AuthMiddleware(middlewares.AuthorizeMiddleware(http.HandlerFunc(h.CreatePost), utils.RoleUser)))
+	mux.Handle("PATCH /posts", middlewares.AuthMiddleware(middlewares.AuthorizeMiddleware(http.HandlerFunc(h.UpdatePost), utils.RoleUser)))
+	mux.Handle("PATCH /posts/{id}", middlewares.AuthMiddleware(middlewares.AuthorizeMiddleware(http.HandlerFunc(h.DeletePost), utils.RoleUser)))
 }
 
 func RegisterAuthRoutes(mux *http.ServeMux, h *AuthHandler) {
@@ -29,10 +44,34 @@ func RegisterAuthRoutes(mux *http.ServeMux, h *AuthHandler) {
 	mux.HandleFunc("GET /verify-email-change", h.VerifyEmailChange)
 	mux.HandleFunc("POST /forgot-password", h.ForgotPassword)
 	mux.HandleFunc("POST /reset-password", h.ResetPassword)
+	mux.HandleFunc("POST /logout", h.Logout)
 }
+
 func RegisterCommentsRoutes(mux *http.ServeMux, h *CommentsHandler) {
-	// mux.HandleFunc("GET /comments", h.Login)
-	mux.Handle("POST /comments", middlewares.AuthMiddleware(http.HandlerFunc(h.CreateComment)))
-	mux.HandleFunc("PATCH /comments", h.UpdateComment)
-	mux.HandleFunc("PATCH /comments/{id}", h.DeleteComment)
+	mux.Handle("POST /comments", middlewares.AuthMiddleware(middlewares.AuthorizeMiddleware(http.HandlerFunc(h.CreateComment), utils.RoleUser)))
+	mux.Handle("PATCH /comments", middlewares.AuthMiddleware(middlewares.AuthorizeMiddleware(http.HandlerFunc(h.UpdateComment), utils.RoleUser)))
+	mux.Handle("PATCH /comments/{id}", middlewares.AuthMiddleware(middlewares.AuthorizeMiddleware(http.HandlerFunc(h.DeleteComment), utils.RoleUser)))
+	mux.HandleFunc("GET /comments/post/{postId}", h.GetCommentsByPost)
+}
+
+func RegisterFollowRoutes(mux *http.ServeMux, h *FollowsHandler) {
+	mux.Handle("POST /follows", middlewares.AuthMiddleware(middlewares.AuthorizeMiddleware(http.HandlerFunc(h.FollowUser), utils.RoleUser)))
+	mux.Handle("DELETE /follows", middlewares.AuthMiddleware(http.HandlerFunc(h.UnfollowUser)))
+	mux.HandleFunc("GET /follows/followers/{id}", h.GetFollowers)
+	mux.HandleFunc("GET /follows/following/{id}", h.GetFollowing)
+	mux.Handle("POST /follows/is-following", middlewares.AuthMiddleware(http.HandlerFunc(h.IsFollowing)))
+	mux.HandleFunc("GET /follows/count/followers/{id}", h.CountFollowers)
+	mux.HandleFunc("GET /follows/count/following/{id}", h.CountFollowing)
+}
+
+func RegisterNotificationRoutes(mux *http.ServeMux, h *NotisHandler) {
+	mux.Handle("GET /notifications", middlewares.AuthMiddleware(http.HandlerFunc(h.GetNotifications)))
+	mux.Handle("GET /notifications/unread-count", middlewares.AuthMiddleware(http.HandlerFunc(h.GetUnreadCount)))
+	mux.Handle("PATCH /notifications/{id}/read", middlewares.AuthMiddleware(http.HandlerFunc(h.MarkAsRead)))
+	mux.Handle("PATCH /notifications/read-all", middlewares.AuthMiddleware(http.HandlerFunc(h.MarkAllAsRead)))
+}
+
+func WsRoutes(mux *http.ServeMux, s *ws.NotificationHub, p *ws.PostHub) {
+	mux.HandleFunc("GET /ws/subscribe", s.SubscribeHandler)
+	mux.HandleFunc("GET /ws/post/{postId}", p.EnterHandler)
 }

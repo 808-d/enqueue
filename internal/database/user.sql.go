@@ -12,32 +12,18 @@ import (
 )
 
 const addPendingEmail = `-- name: AddPendingEmail :exec
-UPDATE users
-SET pending_email = $2,
-    update_time = now()
-WHERE id = $1 AND is_delete = false
+UPDATE users SET pending_email = $2
+where id = $1 and is_delete = false
 `
 
 type AddPendingEmailParams struct {
-	ID           pgtype.UUID
-	PendingEmail pgtype.Text
+	ID           pgtype.UUID `json:"id"`
+	PendingEmail pgtype.Text `json:"pendingEmail"`
 }
 
 func (q *Queries) AddPendingEmail(ctx context.Context, arg AddPendingEmailParams) error {
 	_, err := q.db.Exec(ctx, addPendingEmail, arg.ID, arg.PendingEmail)
 	return err
-}
-
-const checkVerify = `-- name: CheckVerify :one
-SELECT user_id FROM email_verifications
-WHERE (token = $1 AND expires_at < now())
-`
-
-func (q *Queries) CheckVerify(ctx context.Context, token string) (pgtype.UUID, error) {
-	row := q.db.QueryRow(ctx, checkVerify, token)
-	var user_id pgtype.UUID
-	err := row.Scan(&user_id)
-	return user_id, err
 }
 
 const confirmEmailChange = `-- name: ConfirmEmailChange :one
@@ -71,16 +57,16 @@ func (q *Queries) ConfirmEmailChange(ctx context.Context, id pgtype.UUID) (User,
 
 const createUser = `-- name: CreateUser :one
 INSERT INTO users
-(id, username, email, password,name, role, is_delete, email_verified, create_time)
-VALUES (gen_random_uuid(), $1, $2, $3, $4,'user', false, false,now())
+(id, username, email, password, name, role, is_delete, create_time)
+VALUES (gen_random_uuid(), $1, $2, $3, $4, 'user', false, now())
 RETURNING id
 `
 
 type CreateUserParams struct {
-	Username string
-	Email    string
-	Password pgtype.Text
-	Name     pgtype.Text
+	Username string      `json:"username"`
+	Email    string      `json:"email"`
+	Password pgtype.Text `json:"password"`
+	Name     pgtype.Text `json:"name"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (pgtype.UUID, error) {
@@ -93,16 +79,6 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (pgtype.
 	var id pgtype.UUID
 	err := row.Scan(&id)
 	return id, err
-}
-
-const deleteToken = `-- name: DeleteToken :exec
-DELETE FROM email_verifications
-WHERE "token"= $1
-`
-
-func (q *Queries) DeleteToken(ctx context.Context, token string) error {
-	_, err := q.db.Exec(ctx, deleteToken, token)
-	return err
 }
 
 const deleteUser = `-- name: DeleteUser :exec
@@ -142,6 +118,36 @@ func (q *Queries) GetUser(ctx context.Context, id pgtype.UUID) (User, error) {
 	return i, err
 }
 
+const getUserByID = `-- name: GetUserByID :one
+select id, username, "name", email, avatar, bio, role from users
+where is_delete = false and id = $1
+`
+
+type GetUserByIDRow struct {
+	ID       pgtype.UUID `json:"id"`
+	Username string      `json:"username"`
+	Name     pgtype.Text `json:"name"`
+	Email    string      `json:"email"`
+	Avatar   pgtype.Text `json:"avatar"`
+	Bio      pgtype.Text `json:"bio"`
+	Role     string      `json:"role"`
+}
+
+func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (GetUserByIDRow, error) {
+	row := q.db.QueryRow(ctx, getUserByID, id)
+	var i GetUserByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.Name,
+		&i.Email,
+		&i.Avatar,
+		&i.Bio,
+		&i.Role,
+	)
+	return i, err
+}
+
 const getUserByUsername = `-- name: GetUserByUsername :one
 SELECT is_delete, create_time, update_time, id, username, email, avatar, password, role, email_verified, bio, name, pending_email FROM users
 WHERE username = $1 AND is_delete = false LIMIT 1
@@ -174,8 +180,8 @@ WHERE username = $1 AND password = $2 AND is_delete = false LIMIT 1
 `
 
 type GetUserByUsernameAndPasswordParams struct {
-	Username string
-	Password pgtype.Text
+	Username string      `json:"username"`
+	Password pgtype.Text `json:"password"`
 }
 
 func (q *Queries) GetUserByUsernameAndPassword(ctx context.Context, arg GetUserByUsernameAndPasswordParams) (User, error) {
@@ -199,13 +205,13 @@ func (q *Queries) GetUserByUsernameAndPassword(ctx context.Context, arg GetUserB
 	return i, err
 }
 
-const getUserIdByUsername = `-- name: GetUserIdByUsername :one
+const getUserIDByUsername = `-- name: GetUserIDByUsername :one
 SELECT id FROM users
 WHERE username = $1 AND is_delete = false LIMIT 1
 `
 
-func (q *Queries) GetUserIdByUsername(ctx context.Context, username string) (pgtype.UUID, error) {
-	row := q.db.QueryRow(ctx, getUserIdByUsername, username)
+func (q *Queries) GetUserIDByUsername(ctx context.Context, username string) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, getUserIDByUsername, username)
 	var id pgtype.UUID
 	err := row.Scan(&id)
 	return id, err
@@ -256,8 +262,8 @@ where id = $1 and is_delete = false
 `
 
 type UpdatePasswordParams struct {
-	ID       pgtype.UUID
-	Password pgtype.Text
+	ID       pgtype.UUID `json:"id"`
+	Password pgtype.Text `json:"password"`
 }
 
 func (q *Queries) UpdatePassword(ctx context.Context, arg UpdatePasswordParams) error {
@@ -267,7 +273,7 @@ func (q *Queries) UpdatePassword(ctx context.Context, arg UpdatePasswordParams) 
 
 const updateUserNotIncludeEmail = `-- name: UpdateUserNotIncludeEmail :one
 UPDATE users
-SET 
+SET
 username = $2,
 name = $3,
 avatar = $4,
@@ -278,11 +284,11 @@ RETURNING is_delete, create_time, update_time, id, username, email, avatar, pass
 `
 
 type UpdateUserNotIncludeEmailParams struct {
-	ID       pgtype.UUID
-	Username string
-	Name     pgtype.Text
-	Avatar   pgtype.Text
-	Bio      pgtype.Text
+	ID       pgtype.UUID `json:"id"`
+	Username string      `json:"username"`
+	Name     pgtype.Text `json:"name"`
+	Avatar   pgtype.Text `json:"avatar"`
+	Bio      pgtype.Text `json:"bio"`
 }
 
 func (q *Queries) UpdateUserNotIncludeEmail(ctx context.Context, arg UpdateUserNotIncludeEmailParams) (User, error) {
@@ -314,16 +320,16 @@ func (q *Queries) UpdateUserNotIncludeEmail(ctx context.Context, arg UpdateUserN
 
 const userExistsByUsernameOrEmail = `-- name: UserExistsByUsernameOrEmail :one
 SELECT EXISTS (
-  SELECT 1
-  FROM users
-  WHERE (username = $1 OR email = $2)
-  AND is_delete = false
+SELECT 1
+FROM users
+WHERE (username = $1 OR email = $2)
+AND is_delete = false
 )
 `
 
 type UserExistsByUsernameOrEmailParams struct {
-	Username string
-	Email    string
+	Username string `json:"username"`
+	Email    string `json:"email"`
 }
 
 func (q *Queries) UserExistsByUsernameOrEmail(ctx context.Context, arg UserExistsByUsernameOrEmailParams) (bool, error) {
@@ -336,7 +342,7 @@ func (q *Queries) UserExistsByUsernameOrEmail(ctx context.Context, arg UserExist
 const verifyUser = `-- name: VerifyUser :exec
 UPDATE users
 SET email_verified = true, update_time = now()
-WHERE Id = $1 AND is_delete = false
+WHERE id = $1 AND is_delete = false
 `
 
 func (q *Queries) VerifyUser(ctx context.Context, id pgtype.UUID) error {

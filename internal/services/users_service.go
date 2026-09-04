@@ -204,3 +204,11 @@ func (s *UserService) ChangePassword(
 		},
 	})
 }
+
+func (s *UserService) GetUserByID(ctx context.Context,
+	userID uuid.UUID) (database.GetUserByIDRow, error) {
+	return s.repo.GetUserByID(ctx, pgtype.UUID{
+		Bytes: userID,
+		Valid: true,
+	})
+}
