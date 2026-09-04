@@ -6,13 +6,13 @@ import (
 	"enqueue/internal/utils"
 	"errors"
 	"fmt"
-	"github.com/google/uuid"
 	"os"
 	"time"
 
+	"github.com/redis/go-redis/v9"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -27,16 +27,11 @@ func NewAdminService(pool *pgxpool.Pool, rdb *redis.Client) *AdminService {
 }
 
 func (s *AdminService) AdminLogin(ctx context.Context, username string, password string) (database.User, error) {
-	user, err := s.repo.GetUserByUsername(ctx, username)
+	user, err := s.repo.AdminLogin(ctx, username)
 	if err != nil {
 		return database.User{}, errors.New("invalid username or password")
 	}
-	if user.Role != string(utils.RoleAdmin) {
 
-		return database.User{}, errors.New("This account doesn't have right to access this page!")
-	}
-
-	// Verify password using bcrypt
 	if err := bcrypt.CompareHashAndPassword(
 		[]byte(user.Password.String),
 		[]byte(password),
@@ -50,12 +45,11 @@ func (s *AdminService) AdminLogin(ctx context.Context, username string, password
 func (s *AdminService) RequestPasswordReset(ctx context.Context, username string) error {
 	user, err := s.repo.GetUserByUsername(ctx, username)
 	if err != nil {
-		// user not found — silently return nil so the handler's generic response holds
 		return nil
 	}
 
 	if user.Role != "admin" {
-		return nil // don't reveal if user is not admin
+		return nil
 	}
 
 	token, err := utils.GenerateVerificationToken()
@@ -128,7 +122,6 @@ func (s *AdminService) ResetPassword(
 		return fmt.Errorf("update password: %w", err)
 	}
 
-	// Token is one-time use.
 	if err := s.rdb.Del(
 		ctx,
 		"admin_reset_password:"+token,
@@ -137,6 +130,15 @@ func (s *AdminService) ResetPassword(
 	}
 
 	return nil
+}
+
+
+func (s *AdminService) ToggleUserStatus(ctx context.Context, userID uuid.UUID) (bool, error) {
+	isDeleted, err := s.repo.ToggleUserStatus(ctx, pgtype.UUID{Bytes: userID, Valid: true})
+	if err != nil {
+		return false, err
+	}
+	return isDeleted, nil
 }
 
 func (s *AdminService) GetStatistics(ctx context.Context) (AdminStatistics, error) {
@@ -184,7 +186,7 @@ func (s *AdminService) ListUsers(ctx context.Context, page, pageSize int) (Admin
 
 	offset := (page - 1) * pageSize
 
-	total, err := s.repo.CountUsers(ctx)
+	total, err := s.repo.AdminCountAllUsers(ctx)
 	if err != nil {
 		return AdminUsersPage{}, err
 	}

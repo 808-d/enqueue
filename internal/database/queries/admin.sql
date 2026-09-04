@@ -28,11 +28,25 @@ GROUP BY DATE_TRUNC('day', create_time)
 ORDER BY date;
 
 -- name: AdminListUsers :many
-SELECT id, username, email, role, create_time
+SELECT id, username, email, role, create_time, is_delete
 FROM users
 WHERE is_delete = false AND role = 'user'
 ORDER BY create_time DESC
 LIMIT $1 OFFSET $2;
 
--- name: CountUsers :one
-SELECT COUNT(*) FROM users WHERE is_delete = false AND role = 'user';
+-- name: AdminListAllUsers :many
+SELECT id, username, email, role, create_time, is_delete
+FROM users
+WHERE role = 'user'
+ORDER BY create_time DESC
+LIMIT $1 OFFSET $2;
+
+-- name: AdminCountAllUsers :one
+SELECT COUNT(*) FROM users WHERE role = 'user';
+
+-- name: ToggleUserStatus :one
+UPDATE users
+SET is_delete = NOT is_delete,
+    update_time = now()
+WHERE id = $1
+RETURNING is_delete;

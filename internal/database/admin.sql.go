@@ -11,8 +11,68 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const adminCountAllUsers = `-- name: AdminCountAllUsers :one
+SELECT COUNT(*) FROM users WHERE role = 'user'
+`
+
+func (q *Queries) AdminCountAllUsers(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, adminCountAllUsers)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const adminListAllUsers = `-- name: AdminListAllUsers :many
+SELECT id, username, email, role, create_time, is_delete
+FROM users
+WHERE role = 'user'
+ORDER BY create_time DESC
+LIMIT $1 OFFSET $2
+`
+
+type AdminListAllUsersParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+type AdminListAllUsersRow struct {
+	ID         pgtype.UUID      `json:"id"`
+	Username   string           `json:"username"`
+	Email      string           `json:"email"`
+	Role       string           `json:"role"`
+	CreateTime pgtype.Timestamp `json:"createTime"`
+	IsDelete   bool             `json:"isDelete"`
+}
+
+func (q *Queries) AdminListAllUsers(ctx context.Context, arg AdminListAllUsersParams) ([]AdminListAllUsersRow, error) {
+	rows, err := q.db.Query(ctx, adminListAllUsers, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []AdminListAllUsersRow
+	for rows.Next() {
+		var i AdminListAllUsersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Username,
+			&i.Email,
+			&i.Role,
+			&i.CreateTime,
+			&i.IsDelete,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const adminListUsers = `-- name: AdminListUsers :many
-SELECT id, username, email, role, create_time
+SELECT id, username, email, role, create_time, is_delete
 FROM users
 WHERE is_delete = false AND role = 'user'
 ORDER BY create_time DESC
@@ -30,6 +90,7 @@ type AdminListUsersRow struct {
 	Email      string           `json:"email"`
 	Role       string           `json:"role"`
 	CreateTime pgtype.Timestamp `json:"createTime"`
+	IsDelete   bool             `json:"isDelete"`
 }
 
 func (q *Queries) AdminListUsers(ctx context.Context, arg AdminListUsersParams) ([]AdminListUsersRow, error) {
@@ -47,6 +108,7 @@ func (q *Queries) AdminListUsers(ctx context.Context, arg AdminListUsersParams) 
 			&i.Email,
 			&i.Role,
 			&i.CreateTime,
+			&i.IsDelete,
 		); err != nil {
 			return nil, err
 		}
@@ -82,17 +144,6 @@ func (q *Queries) AdminLogin(ctx context.Context, username string) (User, error)
 		&i.PendingEmail,
 	)
 	return i, err
-}
-
-const countUsers = `-- name: CountUsers :one
-SELECT COUNT(*) FROM users WHERE is_delete = false AND role = 'user'
-`
-
-func (q *Queries) CountUsers(ctx context.Context) (int64, error) {
-	row := q.db.QueryRow(ctx, countUsers)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
 }
 
 const getPostsOverTime = `-- name: GetPostsOverTime :many
@@ -194,4 +245,19 @@ func (q *Queries) GetUsersOverTime(ctx context.Context) ([]GetUsersOverTimeRow, 
 		return nil, err
 	}
 	return items, nil
+}
+
+const toggleUserStatus = `-- name: ToggleUserStatus :one
+UPDATE users
+SET is_delete = NOT is_delete,
+    update_time = now()
+WHERE id = $1
+RETURNING is_delete
+`
+
+func (q *Queries) ToggleUserStatus(ctx context.Context, id pgtype.UUID) (bool, error) {
+	row := q.db.QueryRow(ctx, toggleUserStatus, id)
+	var is_delete bool
+	err := row.Scan(&is_delete)
+	return is_delete, err
 }

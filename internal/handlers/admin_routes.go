@@ -16,4 +16,5 @@ func RegisterAdminRoutes(mux *http.ServeMux, h *AdminHandler) {
 	// Protected admin routes
 	mux.Handle("GET /admin/statistics", middlewares.AuthMiddleware(middlewares.AuthorizeMiddleware(http.HandlerFunc(h.GetStatistics), utils.RoleAdmin)))
 	mux.Handle("GET /admin/users", middlewares.AuthMiddleware(middlewares.AuthorizeMiddleware(http.HandlerFunc(h.ListUsers), utils.RoleAdmin)))
+	mux.Handle("PATCH /admin/users/{id}/toggle", middlewares.AuthMiddleware(middlewares.AuthorizeMiddleware(http.HandlerFunc(h.ToggleUserStatus), utils.RoleAdmin)))
 }

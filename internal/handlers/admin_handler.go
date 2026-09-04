@@ -2,14 +2,15 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
+	"log"
 	"net/http"
 	"strconv"
 
 	"enqueue/internal/services"
 	"enqueue/internal/utils"
 
-	"errors"
-	"log"
+	"github.com/google/uuid"
 )
 
 type AdminHandler struct {
@@ -72,7 +73,6 @@ func (h *AdminHandler) AdminForgotPassword(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// intentionally ignore the error here — always respond the same way
 	_ = h.adminService.RequestPasswordReset(r.Context(), req.Username)
 
 	w.Header().Set("Content-Type", "application/json")
@@ -128,6 +128,23 @@ func (h *AdminHandler) AdminResetPassword(w http.ResponseWriter, r *http.Request
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *AdminHandler) ToggleUserStatus(w http.ResponseWriter, r *http.Request) {
+	userID, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "invalid user id", http.StatusBadRequest)
+		return
+	}
+
+	isDeleted, err := h.adminService.ToggleUserStatus(r.Context(), userID)
+	if err != nil {
+		http.Error(w, "failed to toggle user status", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{"isDeleted": isDeleted})
 }
 
 func (h *AdminHandler) GetStatistics(w http.ResponseWriter, r *http.Request) {
