@@ -3,6 +3,7 @@ package ws
 import (
 	"encoding/json"
 	"enqueue/internal/utils"
+	"log"
 	"net/http"
 	"os"
 	"sync"
@@ -50,13 +51,14 @@ func (h *PostHub) EnterHandler(w http.ResponseWriter, r *http.Request) {
 	defer conn.CloseNow()
 
 	u := h.enter(postId, userId)
-	defer h.leave(postId, userId)
+	defer h.leave(postId, u)
 
 	// Handle sending messages to the websocket
 	ctx := r.Context()
 	for {
 		select {
 		case msg := <-u.msgs:
+			log.Printf("msg: %s", msg)
 			if err := conn.Write(ctx, websocket.MessageText, msg); err != nil {
 				return
 			}
@@ -81,18 +83,13 @@ func (h *PostHub) enter(postId uuid.UUID, userId uuid.UUID) *user {
 	return u
 }
 
-func (h *PostHub) leave(postID uuid.UUID, userID uuid.UUID) {
+func (h *PostHub) leave(postID uuid.UUID, u *user) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
 	users := h.conns[postID]
 
-	for u := range users {
-		if u.id == userID {
-			delete(users, u)
-			break
-		}
-	}
+	delete(users, u)
 
 	if len(users) == 0 {
 		delete(h.conns, postID)

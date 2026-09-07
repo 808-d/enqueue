@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"enqueue/internal/database"
 	"enqueue/internal/dtos/users"
 	"enqueue/internal/utils"
@@ -31,15 +32,34 @@ func (s *UserService) GetUsers(ctx context.Context) ([]database.User, error) {
 	return s.repo.ListUsers(ctx)
 }
 
-func (s *UserService) CreateUser(ctx context.Context, username string, email string, password string) {
-	s.repo.CreateUser(ctx, database.CreateUserParams{
+func (s *UserService) CreateUser(ctx context.Context, username string, email string, password string) (database.User, error) {
+	hashedPassword, err := utils.HashPassword(password)
+	if err != nil {
+		return database.User{}, err
+	}
+
+	userID, err := s.repo.CreateUser(ctx, database.CreateUserParams{
 		Username: username,
 		Email:    email,
 		Password: pgtype.Text{
-			String: password,
+			String: hashedPassword,
 			Valid:  true,
 		},
 	})
+	if err != nil {
+		return database.User{}, err
+	}
+
+	// Fetch the created user for audit log
+	user, err := s.repo.GetUser(ctx, pgtype.UUID{Bytes: userID.Bytes, Valid: true})
+	if err != nil {
+		return database.User{}, err
+	}
+
+	// Audit log for user creation
+	s.logAudit(ctx, ActionCreate, EntityUser, uuid.Nil, nil, user)
+
+	return user, nil
 }
 
 func (s *UserService) UpdateUser(
@@ -69,6 +89,9 @@ func (s *UserService) UpdateUser(
 		return "", users.UserResponse{}, false, err
 	}
 
+	// Audit log for user update
+	s.logAudit(ctx, ActionUpdate, EntityUser, id, currentUser, updatedUser)
+
 	if emailChanged {
 		if err := s.RequestEmailChange(ctx, id, email); err != nil {
 			return "", users.UserResponse{}, false, err
@@ -89,10 +112,24 @@ func (s *UserService) UpdateUser(
 }
 
 func (s *UserService) DeleteUser(ctx context.Context, id uuid.UUID) error {
-	return s.repo.DeleteUser(ctx, pgtype.UUID{
+	// Get user before deletion for audit log
+	user, getErr := s.GetUser(ctx, id)
+	if getErr != nil {
+		return getErr
+	}
+
+	delErr := s.repo.DeleteUser(ctx, pgtype.UUID{
 		Bytes: id,
 		Valid: true,
 	})
+	if delErr != nil {
+		return delErr
+	}
+
+	// Audit log for user deletion (soft delete)
+	s.logAudit(ctx, ActionDelete, EntityUser, uuid.Nil, user, nil)
+
+	return nil
 }
 
 func (s *UserService) GetUser(ctx context.Context, id uuid.UUID) (database.User, error) {
@@ -152,7 +189,7 @@ func (s *UserService) RequestEmailChange(ctx context.Context, id uuid.UUID, emai
 
 func toUserResponse(u database.User) users.UserResponse {
 	return users.UserResponse{
-		ID:       u.ID.String(), // adjust based on your actual pgtype.UUID -> string conversion
+		ID:       u.ID.String(),
 		Username: u.Username,
 		Name:     u.Name.String,
 		Email:    u.Email,
@@ -210,5 +247,18 @@ func (s *UserService) GetUserByID(ctx context.Context,
 	return s.repo.GetUserByID(ctx, pgtype.UUID{
 		Bytes: userID,
 		Valid: true,
+	})
+}
+
+func (s *UserService) logAudit(ctx context.Context, action Action, entity EntityName, userID uuid.UUID, oldVal interface{}, newVal interface{}) {
+	oldJSON, _ := json.Marshal(oldVal)
+	newJSON, _ := json.Marshal(newVal)
+
+	_ = s.repo.AddAuditLog(ctx, database.AddAuditLogParams{
+		Action:      string(action),
+		EntityName:  string(entity),
+		OldValue:    oldJSON,
+		NewValue:    newJSON,
+		CreateBy:    pgtype.UUID{Bytes: userID, Valid: true},
 	})
 }

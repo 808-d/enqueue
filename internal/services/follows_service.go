@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"enqueue/internal/database"
 	"enqueue/internal/dtos/notifications"
 	"enqueue/internal/ws"
@@ -60,11 +61,25 @@ func (s *FollowsService) FollowUser(ctx context.Context, followerID, followingID
 		return notifications.NotiResponse{}, err
 	}
 
+	// Audit log for follow creation
+	s.logAudit(ctx, ActionCreate, EntityFollow, followerID, nil, map[string]string{
+		"following_id": followingID.String(),
+	})
+
 	return notif, nil
 }
 
 func (s *FollowsService) UnfollowUser(ctx context.Context, followerID, followingID uuid.UUID) error {
-	return s.repo.UnfollowUser(ctx, database.UnfollowUserParams{
+	// Get old value before deletion
+	oldFollow, err := s.repo.IsFollowing(ctx, database.IsFollowingParams{
+		FollowerID: pgtype.UUID{Bytes: followerID, Valid: true},
+		FollowingID: pgtype.UUID{Bytes: followingID, Valid: true},
+	})
+	if err != nil {
+		return err
+	}
+
+	err = s.repo.UnfollowUser(ctx, database.UnfollowUserParams{
 		FollowerID: pgtype.UUID{
 			Bytes: followerID,
 			Valid: true,
@@ -74,6 +89,14 @@ func (s *FollowsService) UnfollowUser(ctx context.Context, followerID, following
 			Valid: true,
 		},
 	})
+	if err != nil {
+		return err
+	}
+
+	// Audit log for unfollow (delete)
+	s.logAudit(ctx, ActionDelete, EntityFollow, followerID, oldFollow, nil)
+
+	return nil
 }
 
 func (s *FollowsService) GetFollowers(ctx context.Context, userID uuid.UUID) ([]database.User, error) {
@@ -114,5 +137,18 @@ func (s *FollowsService) CountFollowing(ctx context.Context, userID uuid.UUID) (
 	return s.repo.CountFollowing(ctx, pgtype.UUID{
 		Bytes: userID,
 		Valid: true,
+	})
+}
+
+func (s *FollowsService) logAudit(ctx context.Context, action Action, entity EntityName, userID uuid.UUID, oldVal interface{}, newVal interface{}) {
+	oldJSON, _ := json.Marshal(oldVal)
+	newJSON, _ := json.Marshal(newVal)
+
+	_ = s.repo.AddAuditLog(ctx, database.AddAuditLogParams{
+		Action:     string(action),
+		EntityName: string(entity),
+		OldValue:   oldJSON,
+		NewValue:   newJSON,
+		CreateBy:   pgtype.UUID{Bytes: userID, Valid: true},
 	})
 }

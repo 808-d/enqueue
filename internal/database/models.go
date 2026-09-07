@@ -36,6 +36,16 @@ type Compose struct {
 	Role       string           `json:"role"`
 }
 
+type DirectMessage struct {
+	IsDelete   bool             `json:"isDelete"`
+	CreateTime pgtype.Timestamp `json:"createTime"`
+	UpdateTime pgtype.Timestamp `json:"updateTime"`
+	ID         pgtype.UUID      `json:"id"`
+	From       pgtype.UUID      `json:"from"`
+	To         pgtype.UUID      `json:"to"`
+	Message    pgtype.Text      `json:"message"`
+}
+
 type Follow struct {
 	FollowerID  pgtype.UUID      `json:"followerId"`
 	FollowingID pgtype.UUID      `json:"followingId"`
@@ -67,6 +77,18 @@ type Post struct {
 	Thumbnail   pgtype.Text      `json:"thumbnail"`
 	Description pgtype.Text      `json:"description"`
 	Status      int32            `json:"status"`
+}
+
+type Report struct {
+	ID             pgtype.UUID        `json:"id"`
+	ReporterID     pgtype.UUID        `json:"reporterId"`
+	ReportedUserID pgtype.UUID        `json:"reportedUserId"`
+	Reason         string             `json:"reason"`
+	Details        pgtype.Text        `json:"details"`
+	Status         int32              `json:"status"`
+	ResolvedBy     pgtype.UUID        `json:"resolvedBy"`
+	ResolvedAt     pgtype.Timestamptz `json:"resolvedAt"`
+	CreateTime     pgtype.Timestamptz `json:"createTime"`
 }
 
 type Repost struct {
