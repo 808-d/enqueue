@@ -31,6 +31,8 @@ func RegisterRepostRoutes(mux *http.ServeMux, h *RepostHandler) {
 func RegisterPostRoutes(mux *http.ServeMux, h *PostsHandler) {
 	mux.Handle("GET /posts", http.HandlerFunc(h.GetPosts))
 	mux.HandleFunc("GET /posts/user/{id}", h.GetPostsByUser)
+	mux.HandleFunc("GET /posts/user/{id}/liked", h.GetLikedPostsByUser)
+	mux.HandleFunc("GET /posts/user/{id}/reposted", h.GetRepostedPostsByUser)
 	mux.HandleFunc("GET /posts/{id}", h.GetPostById)
 	mux.Handle("POST /posts", middlewares.AuthMiddleware(middlewares.AuthorizeMiddleware(http.HandlerFunc(h.CreatePost), utils.RoleUser)))
 	mux.Handle("PATCH /posts", middlewares.AuthMiddleware(middlewares.AuthorizeMiddleware(http.HandlerFunc(h.UpdatePost), utils.RoleUser)))
@@ -71,7 +73,35 @@ func RegisterNotificationRoutes(mux *http.ServeMux, h *NotisHandler) {
 	mux.Handle("PATCH /notifications/read-all", middlewares.AuthMiddleware(http.HandlerFunc(h.MarkAllAsRead)))
 }
 
-func WsRoutes(mux *http.ServeMux, s *ws.NotificationHub, p *ws.PostHub) {
+func RegisterAdminRoutes(mux *http.ServeMux, h *AdminHandler) {
+	// Public routes
+	mux.HandleFunc("POST /admin/login", h.AdminLogin)
+	mux.HandleFunc("POST /admin/logout", h.Logout)
+	mux.HandleFunc("POST /admin/forgot-password", h.AdminForgotPassword)
+	mux.HandleFunc("POST /admin/reset-password", h.AdminResetPassword)
+
+	// Protected admin routes
+	mux.Handle("GET /admin/statistics", middlewares.AuthMiddleware(middlewares.AuthorizeMiddleware(http.HandlerFunc(h.GetStatistics), utils.RoleAdmin)))
+	mux.Handle("GET /admin/users", middlewares.AuthMiddleware(middlewares.AuthorizeMiddleware(http.HandlerFunc(h.ListUsers), utils.RoleAdmin)))
+	mux.Handle("PATCH /admin/users/{id}/toggle", middlewares.AuthMiddleware(middlewares.AuthorizeMiddleware(http.HandlerFunc(h.ToggleUserStatus), utils.RoleAdmin)))
+}
+
+func RegisterDMRoutes(mux *http.ServeMux, h *DMHandler) {
+	mux.Handle("GET /dm/conversation/{userId}", middlewares.AuthMiddleware(http.HandlerFunc(h.GetConversation)))
+	mux.Handle("POST /dm/send", middlewares.AuthMiddleware(http.HandlerFunc(h.SendMessage)))
+	mux.Handle("PATCH /dm/{id}", middlewares.AuthMiddleware(http.HandlerFunc(h.UpdateMessage)))
+	mux.Handle("DELETE /dm/{id}", middlewares.AuthMiddleware(http.HandlerFunc(h.DeleteMessage)))
+}
+
+func RegisterReportRoutes(mux *http.ServeMux, h *ReportHandler) {
+	// Protected routes
+	mux.Handle("POST /reports", middlewares.AuthMiddleware(middlewares.AuthorizeMiddleware(http.HandlerFunc(h.CreateReport), utils.RoleUser)))
+	mux.Handle("GET /admin/reports", middlewares.AuthMiddleware(middlewares.AuthorizeMiddleware(http.HandlerFunc(h.GetReports), utils.RoleAdmin)))
+	mux.Handle("PATCH /admin/reports/{id}", middlewares.AuthMiddleware(middlewares.AuthorizeMiddleware(http.HandlerFunc(h.UpdateReportStatus), utils.RoleAdmin)))
+}
+
+func WsRoutes(mux *http.ServeMux, s *ws.NotificationHub, p *ws.PostHub, d *ws.DirectMessageHub) {
 	mux.HandleFunc("GET /ws/subscribe", s.SubscribeHandler)
 	mux.HandleFunc("GET /ws/post/{postId}", p.EnterHandler)
+	mux.HandleFunc("GET /ws/dm/{userId2}", d.EnterHandler)
 }

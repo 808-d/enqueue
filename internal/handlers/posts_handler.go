@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"enqueue/internal/database"
 	"enqueue/internal/dtos/posts"
 	"enqueue/internal/services"
 	"enqueue/internal/utils"
@@ -83,6 +84,55 @@ func (h *PostsHandler) GetPostsByUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "failed to get posts", http.StatusInternalServerError)
 		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(posts)
+}
+
+func extractViewerID(r *http.Request) *uuid.UUID {
+	if cookie, err := r.Cookie("token"); err == nil {
+		if claims, err := utils.ValidateToken(cookie.Value); err == nil {
+			return &claims.UserID
+		}
+	}
+	return nil
+}
+
+func (h *PostsHandler) GetLikedPostsByUser(w http.ResponseWriter, r *http.Request) {
+	targetUserID, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "invalid user id", http.StatusBadRequest)
+		return
+	}
+
+	posts, err := h.postService.GetLikedPostsByUser(r.Context(), targetUserID, extractViewerID(r))
+	if err != nil {
+		http.Error(w, "failed to get liked posts", http.StatusInternalServerError)
+		return
+	}
+	if posts == nil {
+		posts = []database.GetLikedPostsByUserRow{}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(posts)
+}
+
+func (h *PostsHandler) GetRepostedPostsByUser(w http.ResponseWriter, r *http.Request) {
+	targetUserID, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "invalid user id", http.StatusBadRequest)
+		return
+	}
+
+	posts, err := h.postService.GetRepostedPostsByUser(r.Context(), targetUserID, extractViewerID(r))
+	if err != nil {
+		http.Error(w, "failed to get reposted posts", http.StatusInternalServerError)
+		return
+	}
+	if posts == nil {
+		posts = []database.GetRepostedPostsByUserRow{}
 	}
 
 	w.Header().Set("Content-Type", "application/json")

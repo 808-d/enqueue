@@ -39,6 +39,132 @@ func (q *Queries) CreatePost(ctx context.Context) (Post, error) {
 	return i, err
 }
 
+const getLikedPostsByUser = `-- name: GetLikedPostsByUser :many
+SELECT
+    p.id,
+    p.title,
+    p.description,
+    p.thumbnail,
+    EXTRACT(EPOCH FROM p.create_time)::bigint AS create_time,
+    u.username,
+    u.avatar,
+    COALESCE(l1.likes_count, 0) AS likes_count,
+    COALESCE(rp1.reposts_count, 0) AS reposts_count,
+    COALESCE(cmt.comments_count, 0) AS comments_count,
+    ( COALESCE(l1.likes_count, 0) * 1 + COALESCE(cmt.comments_count, 0) * 5 + COALESCE(rp1.reposts_count, 0) * 10 ) AS score,
+    EXISTS (
+        SELECT 1
+        FROM likes l2
+        WHERE l2.post_id = p.id
+          AND l2.user_id = $2
+    ) AS is_liked,
+
+    EXISTS (
+        SELECT 1
+        FROM reposts rp2
+        WHERE rp2.post_id = p.id
+          AND rp2.user_id = $2
+    ) AS is_reposted
+
+FROM posts p
+
+INNER JOIN likes lk
+    ON lk.post_id = p.id
+    AND lk.user_id = $1
+
+INNER JOIN composes c
+    ON p.id = c.post_id
+
+INNER JOIN users u
+    ON c.user_id = u.id
+
+LEFT JOIN (
+    SELECT
+        post_id,
+        COUNT(*) AS likes_count
+    FROM likes
+    GROUP BY post_id
+) l1
+    ON p.id = l1.post_id
+
+LEFT JOIN (
+    SELECT
+        post_id,
+        COUNT(*) AS reposts_count
+    FROM reposts
+    GROUP BY post_id
+) rp1
+    ON p.id = rp1.post_id
+
+LEFT JOIN (
+    SELECT
+        post_id,
+        COUNT(*) AS comments_count
+    FROM comments
+    GROUP BY post_id
+) cmt
+    ON p.id = cmt.post_id
+
+WHERE p.status <> 0
+
+ORDER BY p.create_time DESC
+`
+
+type GetLikedPostsByUserParams struct {
+	UserID   pgtype.UUID `json:"userId"`
+	UserID_2 pgtype.UUID `json:"userId2"`
+}
+
+type GetLikedPostsByUserRow struct {
+	ID            pgtype.UUID `json:"id"`
+	Title         pgtype.Text `json:"title"`
+	Description   pgtype.Text `json:"description"`
+	Thumbnail     pgtype.Text `json:"thumbnail"`
+	CreateTime    int64       `json:"createTime"`
+	Username      string      `json:"username"`
+	Avatar        pgtype.Text `json:"avatar"`
+	LikesCount    int64       `json:"likesCount"`
+	RepostsCount  int64       `json:"repostsCount"`
+	CommentsCount int64       `json:"commentsCount"`
+	Score         int32       `json:"score"`
+	IsLiked       bool        `json:"isLiked"`
+	IsReposted    bool        `json:"isReposted"`
+}
+
+func (q *Queries) GetLikedPostsByUser(ctx context.Context, arg GetLikedPostsByUserParams) ([]GetLikedPostsByUserRow, error) {
+	rows, err := q.db.Query(ctx, getLikedPostsByUser, arg.UserID, arg.UserID_2)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetLikedPostsByUserRow
+	for rows.Next() {
+		var i GetLikedPostsByUserRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Description,
+			&i.Thumbnail,
+			&i.CreateTime,
+			&i.Username,
+			&i.Avatar,
+			&i.LikesCount,
+			&i.RepostsCount,
+			&i.CommentsCount,
+			&i.Score,
+			&i.IsLiked,
+			&i.IsReposted,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getPostById = `-- name: GetPostById :one
 SELECT create_time, update_time, id, title, content, thumbnail, description, status FROM POSTS WHERE Id = $1 AND STATUS <> 0
 `
@@ -291,6 +417,132 @@ func (q *Queries) GetPostsByUser(ctx context.Context, arg GetPostsByUserParams) 
 			&i.CreateTime,
 			&i.UpdateTime,
 			&i.Status,
+			&i.IsLiked,
+			&i.IsReposted,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getRepostedPostsByUser = `-- name: GetRepostedPostsByUser :many
+SELECT
+    p.id,
+    p.title,
+    p.description,
+    p.thumbnail,
+    EXTRACT(EPOCH FROM p.create_time)::bigint AS create_time,
+    u.username,
+    u.avatar,
+    COALESCE(l1.likes_count, 0) AS likes_count,
+    COALESCE(rp1.reposts_count, 0) AS reposts_count,
+    COALESCE(cmt.comments_count, 0) AS comments_count,
+    ( COALESCE(l1.likes_count, 0) * 1 + COALESCE(cmt.comments_count, 0) * 5 + COALESCE(rp1.reposts_count, 0) * 10 ) AS score,
+    EXISTS (
+        SELECT 1
+        FROM likes l2
+        WHERE l2.post_id = p.id
+          AND l2.user_id = $2
+    ) AS is_liked,
+
+    EXISTS (
+        SELECT 1
+        FROM reposts rp2
+        WHERE rp2.post_id = p.id
+          AND rp2.user_id = $2
+    ) AS is_reposted
+
+FROM posts p
+
+INNER JOIN reposts rp0
+    ON rp0.post_id = p.id
+    AND rp0.user_id = $1
+
+INNER JOIN composes c
+    ON p.id = c.post_id
+
+INNER JOIN users u
+    ON c.user_id = u.id
+
+LEFT JOIN (
+    SELECT
+        post_id,
+        COUNT(*) AS likes_count
+    FROM likes
+    GROUP BY post_id
+) l1
+    ON p.id = l1.post_id
+
+LEFT JOIN (
+    SELECT
+        post_id,
+        COUNT(*) AS reposts_count
+    FROM reposts
+    GROUP BY post_id
+) rp1
+    ON p.id = rp1.post_id
+
+LEFT JOIN (
+    SELECT
+        post_id,
+        COUNT(*) AS comments_count
+    FROM comments
+    GROUP BY post_id
+) cmt
+    ON p.id = cmt.post_id
+
+WHERE p.status <> 0
+
+ORDER BY p.create_time DESC
+`
+
+type GetRepostedPostsByUserParams struct {
+	UserID   pgtype.UUID `json:"userId"`
+	UserID_2 pgtype.UUID `json:"userId2"`
+}
+
+type GetRepostedPostsByUserRow struct {
+	ID            pgtype.UUID `json:"id"`
+	Title         pgtype.Text `json:"title"`
+	Description   pgtype.Text `json:"description"`
+	Thumbnail     pgtype.Text `json:"thumbnail"`
+	CreateTime    int64       `json:"createTime"`
+	Username      string      `json:"username"`
+	Avatar        pgtype.Text `json:"avatar"`
+	LikesCount    int64       `json:"likesCount"`
+	RepostsCount  int64       `json:"repostsCount"`
+	CommentsCount int64       `json:"commentsCount"`
+	Score         int32       `json:"score"`
+	IsLiked       bool        `json:"isLiked"`
+	IsReposted    bool        `json:"isReposted"`
+}
+
+func (q *Queries) GetRepostedPostsByUser(ctx context.Context, arg GetRepostedPostsByUserParams) ([]GetRepostedPostsByUserRow, error) {
+	rows, err := q.db.Query(ctx, getRepostedPostsByUser, arg.UserID, arg.UserID_2)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetRepostedPostsByUserRow
+	for rows.Next() {
+		var i GetRepostedPostsByUserRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Description,
+			&i.Thumbnail,
+			&i.CreateTime,
+			&i.Username,
+			&i.Avatar,
+			&i.LikesCount,
+			&i.RepostsCount,
+			&i.CommentsCount,
+			&i.Score,
 			&i.IsLiked,
 			&i.IsReposted,
 		); err != nil {

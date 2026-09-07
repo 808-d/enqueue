@@ -56,6 +56,30 @@ func (s *PostService) GetPostsByUser(ctx context.Context, targetUserID uuid.UUID
 	})
 }
 
+func (s *PostService) GetLikedPostsByUser(ctx context.Context, targetUserID uuid.UUID, currentUserID *uuid.UUID) ([]database.GetLikedPostsByUserRow, error) {
+	var currentUserIDParam pgtype.UUID
+	if currentUserID != nil {
+		currentUserIDParam = pgtype.UUID{Bytes: *currentUserID, Valid: true}
+	}
+
+	return s.repo.GetLikedPostsByUser(ctx, database.GetLikedPostsByUserParams{
+		UserID:   pgtype.UUID{Bytes: targetUserID, Valid: true},
+		UserID_2: currentUserIDParam,
+	})
+}
+
+func (s *PostService) GetRepostedPostsByUser(ctx context.Context, targetUserID uuid.UUID, currentUserID *uuid.UUID) ([]database.GetRepostedPostsByUserRow, error) {
+	var currentUserIDParam pgtype.UUID
+	if currentUserID != nil {
+		currentUserIDParam = pgtype.UUID{Bytes: *currentUserID, Valid: true}
+	}
+
+	return s.repo.GetRepostedPostsByUser(ctx, database.GetRepostedPostsByUserParams{
+		UserID:   pgtype.UUID{Bytes: targetUserID, Valid: true},
+		UserID_2: currentUserIDParam,
+	})
+}
+
 func (s *PostService) CreatePost(
 	ctx context.Context,
 	userID uuid.UUID,

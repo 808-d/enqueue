@@ -15,9 +15,7 @@ import (
 	"enqueue/internal/database"
 	"enqueue/internal/handlers"
 	"enqueue/internal/services"
-	"enqueue/internal/ws"
-)
-
+	"enqueue/internal/ws")
 func main() {
 
 	if err := godotenv.Load(); err != nil {
@@ -70,6 +68,11 @@ func main() {
 
 	repostsService := services.NewRepostsSerice(pool)
 	repostsHandler := handlers.NewRepostHandler(repostsService)
+	reportService := services.NewReportService(pool)
+	reportHandler := handlers.NewReportHandler(reportService)
+	dmHub := ws.NewDirectMessageHub()
+	dmService := services.NewDMService(pool, dmHub)
+	dmHandler := handlers.NewDMHandler(dmService)
 	adminService := services.NewAdminService(pool, rdb)
 	adminHandler := handlers.NewAdminHandler(adminService)
 	mux := http.NewServeMux()
@@ -81,13 +84,15 @@ func main() {
 	handlers.RegisterLikeRoutes(mux, likeHandler)
 	handlers.RegisterNotificationRoutes(mux, notisHandler)
 	handlers.RegisterRepostRoutes(mux, repostsHandler)
+	handlers.RegisterReportRoutes(mux, reportHandler)
+	handlers.RegisterDMRoutes(mux, dmHandler)
 	handlers.RegisterAdminRoutes(mux, adminHandler)
 
-	handlers.WsRoutes(mux, notiHub, postHub)
+	handlers.WsRoutes(mux, notiHub, postHub, dmHub)
 	// middlewares
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{os.Getenv("FRONTEND_URL"), os.Getenv("BACKEND_URL")},
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Origin", "Content-Type", "Authorization"},
 		AllowCredentials: true,
 	})

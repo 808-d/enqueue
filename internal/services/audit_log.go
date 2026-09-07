@@ -18,6 +18,7 @@ const (
 	EntityFollow       EntityName = "follow"
 	EntityUser         EntityName = "user"
 	EntityNotification EntityName = "notification"
+	EntityReport      EntityName = "report"
 )
 
 type Action string

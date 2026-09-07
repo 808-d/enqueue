@@ -111,15 +111,15 @@ func (s *LikeService) HasUserLiked(ctx context.Context, userID, postID uuid.UUID
 	return true, nil
 }
 
-func (s *LikeService) logAudit(ctx context.Context, action Action, entity EntityName, userID uuid.UUID, oldVal interface{}, newVal interface{}) {
+func (s *LikeService) logAudit(ctx context.Context, action Action, entity EntityName, userID uuid.UUID, oldVal any, newVal any) {
 	oldJSON, _ := json.Marshal(oldVal)
 	newJSON, _ := json.Marshal(newVal)
 
 	_ = s.repo.AddAuditLog(ctx, database.AddAuditLogParams{
-		Action:      string(action),
-		EntityName:  string(entity),
-		OldValue:    oldJSON,
-		NewValue:    newJSON,
-		CreateBy:    pgtype.UUID{Bytes: userID, Valid: true},
+		Action:     string(action),
+		EntityName: string(entity),
+		OldValue:   oldJSON,
+		NewValue:   newJSON,
+		CreateBy:   pgtype.UUID{Bytes: userID, Valid: true},
 	})
 }

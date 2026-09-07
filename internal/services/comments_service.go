@@ -119,10 +119,10 @@ func (s *CommentService) DeleteComment(ctx context.Context, id uuid.UUID) (datab
 
 type CommentsPageResult struct {
 	Comments    []database.GetCommentsByPostRow `json:"comments"`
-	TotalCount  int64                          `json:"totalCount"`
-	TotalPages  int                            `json:"totalPages"`
-	CurrentPage int                            `json:"currentPage"`
-	PageSize    int                            `json:"pageSize"`
+	TotalCount  int64                           `json:"totalCount"`
+	TotalPages  int                             `json:"totalPages"`
+	CurrentPage int                             `json:"currentPage"`
+	PageSize    int                             `json:"pageSize"`
 }
 
 func (s *CommentService) GetCommentsByPost(ctx context.Context, postID uuid.UUID, page int, pageSize int) (CommentsPageResult, error) {
@@ -165,10 +165,10 @@ func (s *CommentService) logAudit(ctx context.Context, action Action, entity Ent
 	newJSON, _ := json.Marshal(newVal)
 
 	_ = s.repo.AddAuditLog(ctx, database.AddAuditLogParams{
-		Action:      string(action),
-		EntityName:  string(entity),
-		OldValue:    oldJSON,
-		NewValue:    newJSON,
-		CreateBy:    pgtype.UUID{Bytes: userID, Valid: true},
+		Action:     string(action),
+		EntityName: string(entity),
+		OldValue:   oldJSON,
+		NewValue:   newJSON,
+		CreateBy:   pgtype.UUID{Bytes: userID, Valid: true},
 	})
 }
