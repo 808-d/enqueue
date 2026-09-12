@@ -32,6 +32,9 @@ RETURNING *;
 
 -- name: GetPostsByUser :many
 SELECT p.id,p.title,p.description,p.thumbnail,p.create_time,p.update_time,p.status,
+    COALESCE(l1.likes_count, 0) AS likes_count,
+    COALESCE(rp1.reposts_count, 0) AS reposts_count,
+    COALESCE(cmt.comments_count, 0) AS comments_count,
     EXISTS (
         SELECT 1
         FROM likes l2
@@ -47,8 +50,32 @@ SELECT p.id,p.title,p.description,p.thumbnail,p.create_time,p.update_time,p.stat
     ) AS is_reposted
 
 FROM posts p
-INNER JOIN composes c 
-ON p.id = c.post_id 
+INNER JOIN composes c
+ON p.id = c.post_id
+LEFT JOIN (
+    SELECT
+        post_id,
+        COUNT(*) AS likes_count
+    FROM likes
+    GROUP BY post_id
+) l1
+    ON p.id = l1.post_id
+LEFT JOIN (
+    SELECT
+        post_id,
+        COUNT(*) AS reposts_count
+    FROM reposts
+    GROUP BY post_id
+) rp1
+    ON p.id = rp1.post_id
+LEFT JOIN (
+    SELECT
+        post_id,
+        COUNT(*) AS comments_count
+    FROM comments
+    GROUP BY post_id
+) cmt
+    ON p.id = cmt.post_id
 WHERE c.user_id  = $1 AND p.status <> 0
 ORDER BY p.id, p.create_time;
 
@@ -273,6 +300,12 @@ WHERE p.status <> 0
           p.create_time = $1
           AND p.id < $2
       )
+  )
+  AND (
+      $5::text IS NULL
+      OR p.title ILIKE '%' || $5 || '%'
+      OR p.description ILIKE '%' || $5 || '%'
+      OR p.content ILIKE '%' || $5 || '%'
   )
 
 ORDER BY score DESC, p.id DESC

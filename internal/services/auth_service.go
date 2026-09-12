@@ -51,14 +51,15 @@ func (s *AuthService) GetToken(
 
 	user, err := s.repo.GetUserByUsername(ctx, username)
 	if err != nil {
+		log.Printf("error: %s", err)
 		return "", errors.New("invalid username or password")
 	}
-
 	// Verify current password
 	if err := bcrypt.CompareHashAndPassword(
 		[]byte(user.Password.String),
 		[]byte(password),
 	); err != nil {
+		log.Printf("error: %s", err)
 		return "", errors.New("invalid username or password")
 	}
 

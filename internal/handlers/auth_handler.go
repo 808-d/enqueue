@@ -32,7 +32,6 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		req.Password,
 	)
 	if err != nil {
-		log.Printf("Service error: %v\n", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}

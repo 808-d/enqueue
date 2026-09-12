@@ -200,6 +200,9 @@ func (s *AdminService) ListUsers(ctx context.Context, page, pageSize int) (Admin
 	if err != nil {
 		return AdminUsersPage{}, err
 	}
+	if users == nil {
+		users = []database.AdminListUsersRow{}
+	}
 
 	return AdminUsersPage{
 		Users:       users,
@@ -211,7 +214,7 @@ func (s *AdminService) ListUsers(ctx context.Context, page, pageSize int) (Admin
 }
 
 func convertPostsTimeSeries(rows []database.GetPostsOverTimeRow) []TimeSeriesPoint {
-	var result []TimeSeriesPoint
+	result := []TimeSeriesPoint{}
 	for _, row := range rows {
 		result = append(result, TimeSeriesPoint{
 			Date:  row.Date.Time.Format("2006-01-02"),
@@ -222,7 +225,7 @@ func convertPostsTimeSeries(rows []database.GetPostsOverTimeRow) []TimeSeriesPoi
 }
 
 func convertUsersTimeSeries(rows []database.GetUsersOverTimeRow) []TimeSeriesPoint {
-	var result []TimeSeriesPoint
+	result := []TimeSeriesPoint{}
 	for _, row := range rows {
 		result = append(result, TimeSeriesPoint{
 			Date:  row.Date.Time.Format("2006-01-02"),

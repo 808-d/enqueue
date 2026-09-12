@@ -20,7 +20,7 @@ func NewPostService(pool *pgxpool.Pool) *PostService {
 	return &PostService{repo: database.New(pool), db: pool}
 }
 
-func (s *PostService) GetPosts(ctx context.Context, cursorTime *time.Time, cursorID *uuid.UUID, limit int32, userID *uuid.UUID) ([]database.GetPostsRow, error) {
+func (s *PostService) GetPosts(ctx context.Context, cursorTime *time.Time, cursorID *uuid.UUID, limit int32, userID *uuid.UUID, search string) ([]database.GetPostsRow, error) {
 	var timestamp pgtype.Timestamptz
 	var id pgtype.UUID
 
@@ -41,6 +41,7 @@ func (s *PostService) GetPosts(ctx context.Context, cursorTime *time.Time, curso
 		Column2: id,
 		Limit:   limit,
 		UserID:  userIDParam,
+		Column5: search,
 	})
 }
 

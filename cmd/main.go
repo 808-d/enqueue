@@ -8,19 +8,16 @@ import (
 	"os"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/joho/godotenv"
 	"github.com/redis/go-redis/v9"
 	"github.com/rs/cors"
 
 	"enqueue/internal/database"
 	"enqueue/internal/handlers"
 	"enqueue/internal/services"
-	"enqueue/internal/ws")
-func main() {
+	"enqueue/internal/ws"
+)
 
-	if err := godotenv.Load(); err != nil {
-		fmt.Fprint(os.Stderr, ".env not found", err)
-	}
+func main() {
 	// connect to db
 	pool, err := pgxpool.New(context.Background(), os.Getenv("DATABASE_URL"))
 	if err != nil {
@@ -32,7 +29,7 @@ func main() {
 
 	// connect to redis
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
+		Addr:     "redis:6379",
 		Password: "", // no password
 		DB:       0,  // use default DB
 		Protocol: 2,
@@ -89,6 +86,7 @@ func main() {
 	handlers.RegisterAdminRoutes(mux, adminHandler)
 
 	handlers.WsRoutes(mux, notiHub, postHub, dmHub)
+	fmt.Println("FRONTEND_URL:", os.Getenv("FRONTEND_URL"))
 	// middlewares
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{os.Getenv("FRONTEND_URL"), os.Getenv("BACKEND_URL")},

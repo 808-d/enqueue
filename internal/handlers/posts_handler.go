@@ -54,11 +54,17 @@ func (h *PostsHandler) GetPosts(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	posts, err := h.postService.GetPosts(r.Context(), cursorTime, cursorID, limit, userID)
+	search := r.URL.Query().Get("search")
+
+	posts, err := h.postService.GetPosts(r.Context(), cursorTime, cursorID, limit, userID, search)
 
 	if err != nil {
 		http.Error(w, "failed to get posts", http.StatusInternalServerError)
 		return
+	}
+
+	if posts == nil {
+		posts = []database.GetPostsRow{}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -84,6 +90,10 @@ func (h *PostsHandler) GetPostsByUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "failed to get posts", http.StatusInternalServerError)
 		return
+	}
+
+	if posts == nil {
+		posts = []database.GetPostsByUserRow{}
 	}
 
 	w.Header().Set("Content-Type", "application/json")

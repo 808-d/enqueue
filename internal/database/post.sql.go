@@ -293,6 +293,12 @@ WHERE p.status <> 0
           AND p.id < $2
       )
   )
+  AND (
+      $5::text IS NULL
+      OR p.title ILIKE '%' || $5 || '%'
+      OR p.description ILIKE '%' || $5 || '%'
+      OR p.content ILIKE '%' || $5 || '%'
+  )
 
 ORDER BY score DESC, p.id DESC
 LIMIT $3
@@ -303,6 +309,7 @@ type GetPostsParams struct {
 	Column2 pgtype.UUID        `json:"column2"`
 	Limit   int32              `json:"limit"`
 	UserID  pgtype.UUID        `json:"userId"`
+	Column5 string             `json:"column5"`
 }
 
 type GetPostsRow struct {
@@ -327,6 +334,7 @@ func (q *Queries) GetPosts(ctx context.Context, arg GetPostsParams) ([]GetPostsR
 		arg.Column2,
 		arg.Limit,
 		arg.UserID,
+		arg.Column5,
 	)
 	if err != nil {
 		return nil, err
@@ -362,6 +370,9 @@ func (q *Queries) GetPosts(ctx context.Context, arg GetPostsParams) ([]GetPostsR
 
 const getPostsByUser = `-- name: GetPostsByUser :many
 SELECT p.id,p.title,p.description,p.thumbnail,p.create_time,p.update_time,p.status,
+    COALESCE(l1.likes_count, 0) AS likes_count,
+    COALESCE(rp1.reposts_count, 0) AS reposts_count,
+    COALESCE(cmt.comments_count, 0) AS comments_count,
     EXISTS (
         SELECT 1
         FROM likes l2
@@ -377,8 +388,32 @@ SELECT p.id,p.title,p.description,p.thumbnail,p.create_time,p.update_time,p.stat
     ) AS is_reposted
 
 FROM posts p
-INNER JOIN composes c 
-ON p.id = c.post_id 
+INNER JOIN composes c
+ON p.id = c.post_id
+LEFT JOIN (
+    SELECT
+        post_id,
+        COUNT(*) AS likes_count
+    FROM likes
+    GROUP BY post_id
+) l1
+    ON p.id = l1.post_id
+LEFT JOIN (
+    SELECT
+        post_id,
+        COUNT(*) AS reposts_count
+    FROM reposts
+    GROUP BY post_id
+) rp1
+    ON p.id = rp1.post_id
+LEFT JOIN (
+    SELECT
+        post_id,
+        COUNT(*) AS comments_count
+    FROM comments
+    GROUP BY post_id
+) cmt
+    ON p.id = cmt.post_id
 WHERE c.user_id  = $1 AND p.status <> 0
 ORDER BY p.id, p.create_time
 `
@@ -389,15 +424,18 @@ type GetPostsByUserParams struct {
 }
 
 type GetPostsByUserRow struct {
-	ID          pgtype.UUID      `json:"id"`
-	Title       pgtype.Text      `json:"title"`
-	Description pgtype.Text      `json:"description"`
-	Thumbnail   pgtype.Text      `json:"thumbnail"`
-	CreateTime  pgtype.Timestamp `json:"createTime"`
-	UpdateTime  pgtype.Timestamp `json:"updateTime"`
-	Status      int32            `json:"status"`
-	IsLiked     bool             `json:"isLiked"`
-	IsReposted  bool             `json:"isReposted"`
+	ID            pgtype.UUID      `json:"id"`
+	Title         pgtype.Text      `json:"title"`
+	Description   pgtype.Text      `json:"description"`
+	Thumbnail     pgtype.Text      `json:"thumbnail"`
+	CreateTime    pgtype.Timestamp `json:"createTime"`
+	UpdateTime    pgtype.Timestamp `json:"updateTime"`
+	Status        int32            `json:"status"`
+	LikesCount    int64            `json:"likesCount"`
+	RepostsCount  int64            `json:"repostsCount"`
+	CommentsCount int64            `json:"commentsCount"`
+	IsLiked       bool             `json:"isLiked"`
+	IsReposted    bool             `json:"isReposted"`
 }
 
 func (q *Queries) GetPostsByUser(ctx context.Context, arg GetPostsByUserParams) ([]GetPostsByUserRow, error) {
@@ -417,6 +455,9 @@ func (q *Queries) GetPostsByUser(ctx context.Context, arg GetPostsByUserParams) 
 			&i.CreateTime,
 			&i.UpdateTime,
 			&i.Status,
+			&i.LikesCount,
+			&i.RepostsCount,
+			&i.CommentsCount,
 			&i.IsLiked,
 			&i.IsReposted,
 		); err != nil {
