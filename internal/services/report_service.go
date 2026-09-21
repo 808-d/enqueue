@@ -48,7 +48,7 @@ type ReportsPageResult struct {
 	PageSize    int                      `json:"pageSize"`
 }
 
-func (s *ReportService) GetReports(ctx context.Context, page, pageSize int) (ReportsPageResult, error) {
+func (s *ReportService) GetReports(ctx context.Context, page, pageSize int) (*ReportsPageResult, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -60,7 +60,7 @@ func (s *ReportService) GetReports(ctx context.Context, page, pageSize int) (Rep
 
 	totalCount, err := s.repo.CountReports(ctx)
 	if err != nil {
-		return ReportsPageResult{}, err
+		return nil, err
 	}
 
 	totalPages := int((totalCount + int64(pageSize) - 1) / int64(pageSize))
@@ -70,13 +70,13 @@ func (s *ReportService) GetReports(ctx context.Context, page, pageSize int) (Rep
 		Offset: int32(offset),
 	})
 	if err != nil {
-		return ReportsPageResult{}, err
+		return nil, err
 	}
 	if reports == nil {
 		reports = []database.GetReportsRow{}
 	}
 
-	return ReportsPageResult{
+	return &ReportsPageResult{
 		Reports:     reports,
 		TotalCount:  totalCount,
 		TotalPages:  totalPages,
@@ -85,14 +85,14 @@ func (s *ReportService) GetReports(ctx context.Context, page, pageSize int) (Rep
 	}, nil
 }
 
-func (s *ReportService) UpdateReportStatus(ctx context.Context, reportID uuid.UUID, status int32, resolverID uuid.UUID) (database.UpdateReportRow, error) {
+func (s *ReportService) UpdateReportStatus(ctx context.Context, reportID uuid.UUID, status int32, resolverID uuid.UUID) (*database.UpdateReportRow, error) {
 	updated, err := s.repo.UpdateReport(ctx, database.UpdateReportParams{
 		ID:         pgtype.UUID{Bytes: reportID, Valid: true},
 		Status:     status,
 		ResolvedBy: pgtype.UUID{Bytes: resolverID, Valid: true},
 	})
 	if err != nil {
-		return database.UpdateReportRow{}, err
+		return nil, err
 	}
 
 	s.logAudit(ctx, ActionUpdate, EntityReport, resolverID, nil, map[string]any{
@@ -100,7 +100,7 @@ func (s *ReportService) UpdateReportStatus(ctx context.Context, reportID uuid.UU
 		"status":    status,
 	})
 
-	return updated, nil
+	return &updated, nil
 }
 
 func (s *ReportService) logAudit(ctx context.Context, action Action, entity EntityName, userID uuid.UUID, oldVal any, newVal any) {

@@ -52,7 +52,7 @@ func (s *PostService) GetPostsByUser(ctx context.Context, targetUserID uuid.UUID
 	}
 
 	return s.repo.GetPostsByUser(ctx, database.GetPostsByUserParams{
-		UserID:       pgtype.UUID{Bytes: targetUserID, Valid: true},
+		UserID:   pgtype.UUID{Bytes: targetUserID, Valid: true},
 		UserID_2: currentUserIDParam,
 	})
 }
@@ -84,10 +84,10 @@ func (s *PostService) GetRepostedPostsByUser(ctx context.Context, targetUserID u
 func (s *PostService) CreatePost(
 	ctx context.Context,
 	userID uuid.UUID,
-) (database.Post, error) {
+) (*database.Post, error) {
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
-		return database.Post{}, err
+		return nil, err
 	}
 	defer tx.Rollback(ctx)
 
@@ -96,7 +96,7 @@ func (s *PostService) CreatePost(
 	post, err := qtx.CreatePost(ctx)
 	if err != nil {
 		s.logAudit(ctx, ActionCreate, EntityPost, userID, nil, post)
-		return database.Post{}, err
+		return nil, err
 	}
 
 	err = qtx.CreateCompose(ctx, database.CreateComposeParams{
@@ -108,16 +108,16 @@ func (s *PostService) CreatePost(
 	})
 	if err != nil {
 		s.logAudit(ctx, ActionCreate, EntityPost, userID, nil, err.Error())
-		return database.Post{}, err
+		return nil, err
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return database.Post{}, err
+		return nil, err
 	}
 
 	s.logAudit(ctx, ActionCreate, EntityPost, userID, nil, post)
 
-	return post, nil
+	return &post, nil
 }
 
 func (s *PostService) UpdatePost(
@@ -127,10 +127,10 @@ func (s *PostService) UpdatePost(
 	content string,
 	description string,
 	thumbnailUrl string,
-) (database.Post, error) {
+) (*database.Post, error) {
 	oldPost, err := s.repo.GetPostWithOwner(ctx, pgtype.UUID{Bytes: id, Valid: true})
 	if err != nil {
-		return database.Post{}, err
+		return nil, err
 	}
 
 	updatedPost, err := s.repo.UpdatePost(ctx, database.UpdatePostParams{
@@ -157,18 +157,18 @@ func (s *PostService) UpdatePost(
 	})
 	if err != nil {
 		s.logAudit(ctx, ActionUpdate, EntityPost, uuid.UUID(oldPost.UserID.Bytes), oldPost, err.Error())
-		return database.Post{}, err
+		return nil, err
 	}
 
 	s.logAudit(ctx, ActionUpdate, EntityPost, uuid.UUID(oldPost.UserID.Bytes), oldPost, updatedPost)
 
-	return updatedPost, nil
+	return &updatedPost, nil
 }
 
-func (s *PostService) DeletePost(ctx context.Context, postId uuid.UUID) (database.Post, error) {
+func (s *PostService) DeletePost(ctx context.Context, postId uuid.UUID) (*database.Post, error) {
 	oldPost, err := s.repo.GetPostWithOwner(ctx, pgtype.UUID{Bytes: postId, Valid: true})
 	if err != nil {
-		return database.Post{}, err
+		return nil, err
 	}
 
 	deletedPost, err := s.repo.UpdatePostStatus(ctx, database.UpdatePostStatusParams{
@@ -180,31 +180,31 @@ func (s *PostService) DeletePost(ctx context.Context, postId uuid.UUID) (databas
 	})
 	if err != nil {
 		s.logAudit(ctx, ActionDelete, EntityPost, uuid.UUID(oldPost.UserID.Bytes), oldPost, err.Error())
-		return database.Post{}, err
+		return nil, err
 	}
 
 	s.logAudit(ctx, ActionUpdate, EntityPost, uuid.UUID(oldPost.UserID.Bytes), oldPost, deletedPost)
 
-	return deletedPost, nil
+	return &deletedPost, nil
 }
 
-func (s *PostService) GetPostById(ctx context.Context, postId uuid.UUID) (database.Post, []database.GetCommentsByPostRow, error) {
+func (s *PostService) GetPostById(ctx context.Context, postId uuid.UUID) (*database.Post, []database.GetCommentsByPostRow, error) {
 	post, err := s.repo.GetPostById(ctx, pgtype.UUID{
 		Bytes: postId,
 		Valid: true,
 	})
 	if err != nil {
-		return database.Post{}, nil, err
+		return nil, nil, err
 	}
 
 	comments, err := s.repo.GetCommentsByPost(ctx, database.GetCommentsByPostParams{
 		PostID: pgtype.UUID{Bytes: postId, Valid: true},
 		Limit:  20,
 	})
-	return post, comments, err
+	return &post, comments, err
 }
 
-func (s *PostService) UpdatePostStatus(ctx context.Context, postId uuid.UUID) (database.Post, error) {
+func (s *PostService) UpdatePostStatus(ctx context.Context, postId uuid.UUID) (*database.Post, error) {
 	posts, err := s.repo.UpdatePostStatus(ctx, database.UpdatePostStatusParams{
 		ID: pgtype.UUID{
 			Bytes: postId,
@@ -212,9 +212,9 @@ func (s *PostService) UpdatePostStatus(ctx context.Context, postId uuid.UUID) (d
 		},
 	})
 	if err != nil {
-		return database.Post{}, err
+		return nil, err
 	}
-	return posts, err
+	return &posts, err
 }
 
 func (s *PostService) logAudit(ctx context.Context, action Action, entity EntityName, userID uuid.UUID, oldVal interface{}, newVal interface{}) {
@@ -222,10 +222,10 @@ func (s *PostService) logAudit(ctx context.Context, action Action, entity Entity
 	newJSON, _ := json.Marshal(newVal)
 
 	_ = s.repo.AddAuditLog(ctx, database.AddAuditLogParams{
-		Action:      string(action),
-		EntityName:  string(entity),
-		OldValue:    oldJSON,
-		NewValue:    newJSON,
-		CreateBy:    pgtype.UUID{Bytes: userID, Valid: true},
+		Action:     string(action),
+		EntityName: string(entity),
+		OldValue:   oldJSON,
+		NewValue:   newJSON,
+		CreateBy:   pgtype.UUID{Bytes: userID, Valid: true},
 	})
 }

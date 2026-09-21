@@ -40,7 +40,7 @@ func (h *FollowsHandler) FollowUser(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	if notif.ID != "" {
+	if notif != nil && notif.ID != "" {
 		json.NewEncoder(w).Encode(notif)
 	} else {
 		json.NewEncoder(w).Encode(map[string]string{"message": "followed successfully"})

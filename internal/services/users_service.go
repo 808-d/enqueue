@@ -32,10 +32,10 @@ func (s *UserService) GetUsers(ctx context.Context) ([]database.User, error) {
 	return s.repo.ListUsers(ctx)
 }
 
-func (s *UserService) CreateUser(ctx context.Context, username string, email string, password string) (database.User, error) {
+func (s *UserService) CreateUser(ctx context.Context, username string, email string, password string) (*database.User, error) {
 	hashedPassword, err := utils.HashPassword(password)
 	if err != nil {
-		return database.User{}, err
+		return nil, err
 	}
 
 	userID, err := s.repo.CreateUser(ctx, database.CreateUserParams{
@@ -47,19 +47,19 @@ func (s *UserService) CreateUser(ctx context.Context, username string, email str
 		},
 	})
 	if err != nil {
-		return database.User{}, err
+		return nil, err
 	}
 
 	// Fetch the created user for audit log
 	user, err := s.repo.GetUser(ctx, pgtype.UUID{Bytes: userID.Bytes, Valid: true})
 	if err != nil {
-		return database.User{}, err
+		return nil, err
 	}
 
 	// Audit log for user creation
 	s.logAudit(ctx, ActionCreate, EntityUser, uuid.Nil, nil, user)
 
-	return user, nil
+	return &user, nil
 }
 
 func (s *UserService) UpdateUser(
@@ -70,10 +70,10 @@ func (s *UserService) UpdateUser(
 	avatar string,
 	bio string,
 	email string,
-) (string, users.UserResponse, bool, error) {
+) (string, *users.UserResponse, bool, error) {
 	currentUser, err := s.GetUser(ctx, id)
 	if err != nil {
-		return "", users.UserResponse{}, false, err
+		return "", nil, false, err
 	}
 
 	emailChanged := currentUser.Email != email
@@ -86,7 +86,7 @@ func (s *UserService) UpdateUser(
 		Bio:      pgtype.Text{String: bio, Valid: true},
 	})
 	if err != nil {
-		return "", users.UserResponse{}, false, err
+		return "", nil, false, err
 	}
 
 	// Audit log for user update
@@ -94,7 +94,7 @@ func (s *UserService) UpdateUser(
 
 	if emailChanged {
 		if err := s.RequestEmailChange(ctx, id, email); err != nil {
-			return "", users.UserResponse{}, false, err
+			return "", nil, false, err
 		}
 	}
 
@@ -105,10 +105,11 @@ func (s *UserService) UpdateUser(
 		updatedUser.Role,
 	)
 	if err != nil {
-		return "", users.UserResponse{}, false, err
+		return "", nil, false, err
 	}
 
-	return token, toUserResponse(updatedUser), emailChanged, nil
+	resp := toUserResponse(updatedUser)
+	return token, &resp, emailChanged, nil
 }
 
 func (s *UserService) DeleteUser(ctx context.Context, id uuid.UUID) error {
@@ -132,23 +133,25 @@ func (s *UserService) DeleteUser(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-func (s *UserService) GetUser(ctx context.Context, id uuid.UUID) (database.User, error) {
-	return s.repo.GetUser(ctx, pgtype.UUID{
+func (s *UserService) GetUser(ctx context.Context, id uuid.UUID) (*database.User, error) {
+	user, err := s.repo.GetUser(ctx, pgtype.UUID{
 		Bytes: id,
 		Valid: true,
 	})
+	return &user, err
 }
 
-func (s *UserService) GetCurrentUser(ctx context.Context, id uuid.UUID) (users.UserResponse, error) {
+func (s *UserService) GetCurrentUser(ctx context.Context, id uuid.UUID) (*users.UserResponse, error) {
 	user, err := s.repo.GetUser(ctx, pgtype.UUID{
 		Bytes: id,
 		Valid: true,
 	})
 	if err != nil {
-		return users.UserResponse{}, err
+		return nil, err
 	}
 
-	return toUserResponse(user), nil
+	resp := toUserResponse(user)
+	return &resp, nil
 }
 
 func (s *UserService) RequestEmailChange(ctx context.Context, id uuid.UUID, email string) error {
@@ -243,11 +246,26 @@ func (s *UserService) ChangePassword(
 }
 
 func (s *UserService) GetUserByID(ctx context.Context,
-	userID uuid.UUID) (database.GetUserByIDRow, error) {
-	return s.repo.GetUserByID(ctx, pgtype.UUID{
+	userID uuid.UUID) (*database.GetUserByIDRow, error) {
+	row, err := s.repo.GetUserByID(ctx, pgtype.UUID{
 		Bytes: userID,
 		Valid: true,
 	})
+	if err != nil {
+		return nil, err
+	}
+	return &row, nil
+}
+
+func (s *UserService) GetProfile(ctx context.Context, userID uuid.UUID) (*database.GetProfileRow, error) {
+	profile, err := s.repo.GetProfile(ctx, pgtype.UUID{
+		Bytes: userID,
+		Valid: true,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &profile, nil
 }
 
 func (s *UserService) logAudit(ctx context.Context, action Action, entity EntityName, userID uuid.UUID, oldVal interface{}, newVal interface{}) {
@@ -255,10 +273,10 @@ func (s *UserService) logAudit(ctx context.Context, action Action, entity Entity
 	newJSON, _ := json.Marshal(newVal)
 
 	_ = s.repo.AddAuditLog(ctx, database.AddAuditLogParams{
-		Action:      string(action),
-		EntityName:  string(entity),
-		OldValue:    oldJSON,
-		NewValue:    newJSON,
-		CreateBy:    pgtype.UUID{Bytes: userID, Valid: true},
+		Action:     string(action),
+		EntityName: string(entity),
+		OldValue:   oldJSON,
+		NewValue:   newJSON,
+		CreateBy:   pgtype.UUID{Bytes: userID, Valid: true},
 	})
 }

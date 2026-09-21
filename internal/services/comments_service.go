@@ -22,10 +22,10 @@ func NewCommentService(repo *database.Queries, notis *NotisService, postHub *ws.
 	return &CommentService{repo: repo, notis: notis, postHub: postHub, db: db}
 }
 
-func (s *CommentService) CreateComment(ctx context.Context, userID uuid.UUID, postID uuid.UUID, content string, replyTo uuid.UUID) (database.CreateCommentRow, error) {
+func (s *CommentService) CreateComment(ctx context.Context, userID uuid.UUID, postID uuid.UUID, content string, replyTo uuid.UUID) (*database.CreateCommentRow, error) {
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
-		return database.CreateCommentRow{}, err
+		return nil, err
 	}
 	defer tx.Rollback(ctx)
 
@@ -47,11 +47,11 @@ func (s *CommentService) CreateComment(ctx context.Context, userID uuid.UUID, po
 		},
 	})
 	if err != nil {
-		return database.CreateCommentRow{}, err
+		return nil, err
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return database.CreateCommentRow{}, err
+		return nil, err
 	}
 
 	// Audit log for comment creation
@@ -65,14 +65,14 @@ func (s *CommentService) CreateComment(ctx context.Context, userID uuid.UUID, po
 		})
 	}
 
-	return comment, nil
+	return &comment, nil
 }
 
 func (s *CommentService) UpdateComment(
 	ctx context.Context,
 	id uuid.UUID,
 	content string,
-) (database.UpdateCommentRow, error) {
+) (*database.UpdateCommentRow, error) {
 	comment, err := s.repo.UpdateComment(ctx, database.UpdateCommentParams{
 		ID: pgtype.UUID{
 			Bytes: id,
@@ -81,7 +81,7 @@ func (s *CommentService) UpdateComment(
 		Content: content,
 	})
 	if err != nil {
-		return database.UpdateCommentRow{}, err
+		return nil, err
 	}
 
 	// Audit log for comment update
@@ -93,16 +93,16 @@ func (s *CommentService) UpdateComment(
 		s.postHub.BroadcastCommentUpdated(postID, comment)
 	}
 
-	return comment, nil
+	return &comment, nil
 }
 
-func (s *CommentService) DeleteComment(ctx context.Context, id uuid.UUID) (database.DeleteCommentRow, error) {
+func (s *CommentService) DeleteComment(ctx context.Context, id uuid.UUID) (*database.DeleteCommentRow, error) {
 	comment, err := s.repo.DeleteComment(ctx, pgtype.UUID{
 		Bytes: id,
 		Valid: true,
 	})
 	if err != nil {
-		return database.DeleteCommentRow{}, err
+		return nil, err
 	}
 
 	// Audit log for comment deletion
@@ -114,7 +114,7 @@ func (s *CommentService) DeleteComment(ctx context.Context, id uuid.UUID) (datab
 		s.postHub.BroadcastCommentDeleted(postID, id)
 	}
 
-	return comment, nil
+	return &comment, nil
 }
 
 type CommentsPageResult struct {
@@ -125,7 +125,7 @@ type CommentsPageResult struct {
 	PageSize    int                             `json:"pageSize"`
 }
 
-func (s *CommentService) GetCommentsByPost(ctx context.Context, postID uuid.UUID, page int, pageSize int) (CommentsPageResult, error) {
+func (s *CommentService) GetCommentsByPost(ctx context.Context, postID uuid.UUID, page int, pageSize int) (*CommentsPageResult, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -137,7 +137,7 @@ func (s *CommentService) GetCommentsByPost(ctx context.Context, postID uuid.UUID
 
 	totalCount, err := s.repo.CountCommentsByPost(ctx, pgtype.UUID{Bytes: postID, Valid: true})
 	if err != nil {
-		return CommentsPageResult{}, err
+		return nil, err
 	}
 
 	totalPages := int((totalCount + int64(pageSize) - 1) / int64(pageSize))
@@ -148,10 +148,10 @@ func (s *CommentService) GetCommentsByPost(ctx context.Context, postID uuid.UUID
 		Offset: int32(offset),
 	})
 	if err != nil {
-		return CommentsPageResult{}, err
+		return nil, err
 	}
 
-	return CommentsPageResult{
+	return &CommentsPageResult{
 		Comments:    comments,
 		TotalCount:  totalCount,
 		TotalPages:  totalPages,

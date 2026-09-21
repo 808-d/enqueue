@@ -26,20 +26,20 @@ func NewAdminService(pool *pgxpool.Pool, rdb *redis.Client) *AdminService {
 	return &AdminService{repo: database.New(pool), db: pool, rdb: rdb}
 }
 
-func (s *AdminService) AdminLogin(ctx context.Context, username string, password string) (database.User, error) {
+func (s *AdminService) AdminLogin(ctx context.Context, username string, password string) (*database.User, error) {
 	user, err := s.repo.AdminLogin(ctx, username)
 	if err != nil {
-		return database.User{}, errors.New("invalid username or password")
+		return nil, errors.New("invalid username or password")
 	}
 
 	if err := bcrypt.CompareHashAndPassword(
 		[]byte(user.Password.String),
 		[]byte(password),
 	); err != nil {
-		return database.User{}, errors.New("invalid username or password")
+		return nil, errors.New("invalid username or password")
 	}
 
-	return user, nil
+	return &user, nil
 }
 
 func (s *AdminService) RequestPasswordReset(ctx context.Context, username string) error {
@@ -141,33 +141,33 @@ func (s *AdminService) ToggleUserStatus(ctx context.Context, userID uuid.UUID) (
 	return isDeleted, nil
 }
 
-func (s *AdminService) GetStatistics(ctx context.Context) (AdminStatistics, error) {
+func (s *AdminService) GetStatistics(ctx context.Context) (*AdminStatistics, error) {
 	totalPosts, err := s.repo.GetTotalPosts(ctx)
 	if err != nil {
-		return AdminStatistics{}, err
+		return nil, err
 	}
 
 	totalUsers, err := s.repo.GetTotalUsers(ctx)
 	if err != nil {
-		return AdminStatistics{}, err
+		return nil, err
 	}
 
 	totalComments, err := s.repo.GetTotalComments(ctx)
 	if err != nil {
-		return AdminStatistics{}, err
+		return nil, err
 	}
 
 	postsOverTime, err := s.repo.GetPostsOverTime(ctx)
 	if err != nil {
-		return AdminStatistics{}, err
+		return nil, err
 	}
 
 	usersOverTime, err := s.repo.GetUsersOverTime(ctx)
 	if err != nil {
-		return AdminStatistics{}, err
+		return nil, err
 	}
 
-	return AdminStatistics{
+	return &AdminStatistics{
 		TotalPosts:    totalPosts,
 		TotalUsers:    totalUsers,
 		TotalComments: totalComments,
@@ -176,7 +176,7 @@ func (s *AdminService) GetStatistics(ctx context.Context) (AdminStatistics, erro
 	}, nil
 }
 
-func (s *AdminService) ListUsers(ctx context.Context, page, pageSize int) (AdminUsersPage, error) {
+func (s *AdminService) ListUsers(ctx context.Context, page, pageSize int) (*AdminUsersPage, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -188,7 +188,7 @@ func (s *AdminService) ListUsers(ctx context.Context, page, pageSize int) (Admin
 
 	total, err := s.repo.AdminCountAllUsers(ctx)
 	if err != nil {
-		return AdminUsersPage{}, err
+		return nil, err
 	}
 
 	totalPages := int((total + int64(pageSize) - 1) / int64(pageSize))
@@ -198,13 +198,13 @@ func (s *AdminService) ListUsers(ctx context.Context, page, pageSize int) (Admin
 		Offset: int32(offset),
 	})
 	if err != nil {
-		return AdminUsersPage{}, err
+		return nil, err
 	}
 	if users == nil {
 		users = []database.AdminListUsersRow{}
 	}
 
-	return AdminUsersPage{
+	return &AdminUsersPage{
 		Users:       users,
 		TotalCount:  total,
 		TotalPages:  totalPages,

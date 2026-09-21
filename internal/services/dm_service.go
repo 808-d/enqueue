@@ -35,14 +35,14 @@ func (s *DMService) GetConversationMessages(ctx context.Context, userID, otherUs
 	})
 }
 
-func (s *DMService) AddMessage(ctx context.Context, fromID uuid.UUID, toID uuid.UUID, content string) (database.DirectMessage, error) {
+func (s *DMService) AddMessage(ctx context.Context, fromID uuid.UUID, toID uuid.UUID, content string) (*database.DirectMessage, error) {
 	msg, err := s.repo.AddMessage(ctx, database.AddMessageParams{
 		From:    pgtype.UUID{Bytes: fromID, Valid: true},
 		To:      pgtype.UUID{Bytes: toID, Valid: true},
 		Message: pgtype.Text{String: content, Valid: true},
 	})
 	if err != nil {
-		return database.DirectMessage{}, err
+		return nil, err
 	}
 
 	// Audit log for message creation
@@ -56,16 +56,16 @@ func (s *DMService) AddMessage(ctx context.Context, fromID uuid.UUID, toID uuid.
 		})
 	}
 
-	return msg, nil
+	return &msg, nil
 }
 
-func (s *DMService) UpdateMessage(ctx context.Context, id uuid.UUID, content string) (database.DirectMessage, error) {
+func (s *DMService) UpdateMessage(ctx context.Context, id uuid.UUID, content string) (*database.DirectMessage, error) {
 	msg, err := s.repo.UpdateMessage(ctx, database.UpdateMessageParams{
 		ID:      pgtype.UUID{Bytes: id, Valid: true},
 		Message: pgtype.Text{String: content, Valid: true},
 	})
 	if err != nil {
-		return database.DirectMessage{}, err
+		return nil, err
 	}
 
 	// Audit log for message update
@@ -79,13 +79,13 @@ func (s *DMService) UpdateMessage(ctx context.Context, id uuid.UUID, content str
 		})
 	}
 
-	return msg, nil
+	return &msg, nil
 }
 
-func (s *DMService) DeleteMessage(ctx context.Context, id uuid.UUID) (database.DirectMessage, error) {
+func (s *DMService) DeleteMessage(ctx context.Context, id uuid.UUID) (*database.DirectMessage, error) {
 	msg, err := s.repo.DeleteMessage(ctx, pgtype.UUID{Bytes: id, Valid: true})
 	if err != nil {
-		return database.DirectMessage{}, err
+		return nil, err
 	}
 
 	// Audit log for message deletion (soft delete)
@@ -99,7 +99,7 @@ func (s *DMService) DeleteMessage(ctx context.Context, id uuid.UUID) (database.D
 		})
 	}
 
-	return msg, nil
+	return &msg, nil
 }
 
 func (s *DMService) logAudit(ctx context.Context, action Action, entity string, userID uuid.UUID, oldVal interface{}, newVal interface{}) {

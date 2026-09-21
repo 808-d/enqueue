@@ -44,27 +44,27 @@ func toNotificationResponse(n database.Notification, actorUsername string) notif
 	}
 }
 
-func (s *NotisService) CreateFollowNotification(ctx context.Context, recipientID, actorID uuid.UUID) (notifications.NotiResponse, error) {
+func (s *NotisService) CreateFollowNotification(ctx context.Context, recipientID, actorID uuid.UUID) (*notifications.NotiResponse, error) {
 	return s.create(ctx, recipientID, actorID, "follow", actorID)
 }
 
-func (s *NotisService) CreateLikeNotification(ctx context.Context, recipientID, actorID, postID uuid.UUID) (notifications.NotiResponse, error) {
+func (s *NotisService) CreateLikeNotification(ctx context.Context, recipientID, actorID, postID uuid.UUID) (*notifications.NotiResponse, error) {
 	return s.create(ctx, recipientID, actorID, "like", postID)
 }
 
-func (s *NotisService) CreateCommentNotification(ctx context.Context, recipientID, actorID, postID uuid.UUID) (notifications.NotiResponse, error) {
+func (s *NotisService) CreateCommentNotification(ctx context.Context, recipientID, actorID, postID uuid.UUID) (*notifications.NotiResponse, error) {
 	return s.create(ctx, recipientID, actorID, "comment", postID)
 }
 
-func (s *NotisService) create(ctx context.Context, recipientID, actorID uuid.UUID, notifType string, entityID uuid.UUID) (notifications.NotiResponse, error) {
+func (s *NotisService) create(ctx context.Context, recipientID, actorID uuid.UUID, notifType string, entityID uuid.UUID) (*notifications.NotiResponse, error) {
 	// don't notify yourself (e.g., liking or commenting on your own post)
 	if recipientID == actorID {
-		return notifications.NotiResponse{}, nil
+		return nil, nil
 	}
 
 	actor, err := s.repo.GetUser(ctx, pgtype.UUID{Bytes: actorID, Valid: true})
 	if err != nil {
-		return notifications.NotiResponse{}, err
+		return nil, err
 	}
 
 	notif, err := s.repo.CreateNotification(ctx, database.CreateNotificationParams{
@@ -74,7 +74,7 @@ func (s *NotisService) create(ctx context.Context, recipientID, actorID uuid.UUI
 		EntityID:    pgtype.UUID{Bytes: entityID, Valid: true},
 	})
 	if err != nil {
-		return notifications.NotiResponse{}, err
+		return nil, err
 	}
 
 	resp := toNotificationResponse(notif, actor.Username)
@@ -82,7 +82,7 @@ func (s *NotisService) create(ctx context.Context, recipientID, actorID uuid.UUI
 	// live push — best effort, doesn't fail the request if recipient isn't connected
 	s.hub.PushToUser(recipientID, resp)
 
-	return resp, nil
+	return &resp, nil
 }
 
 func (s *NotisService) GetNotifications(ctx context.Context, userID uuid.UUID) ([]notifications.NotiResponse, error) {

@@ -27,10 +27,10 @@ func NewFollowsService(pool *pgxpool.Pool, hub *ws.NotificationHub) *FollowsServ
 	}
 }
 
-func (s *FollowsService) FollowUser(ctx context.Context, followerID, followingID uuid.UUID) (notifications.NotiResponse, error) {
+func (s *FollowsService) FollowUser(ctx context.Context, followerID, followingID uuid.UUID) (*notifications.NotiResponse, error) {
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
-		return notifications.NotiResponse{}, err
+		return nil, err
 	}
 	defer tx.Rollback(ctx)
 
@@ -48,17 +48,17 @@ func (s *FollowsService) FollowUser(ctx context.Context, followerID, followingID
 		},
 	})
 	if err != nil {
-		return notifications.NotiResponse{}, err
+		return nil, err
 	}
 
 	// Create follow notification
 	notif, err := s.notis.CreateFollowNotification(ctx, followingID, followerID)
 	if err != nil {
-		return notifications.NotiResponse{}, err
+		return nil, err
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return notifications.NotiResponse{}, err
+		return nil, err
 	}
 
 	// Audit log for follow creation

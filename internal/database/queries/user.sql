@@ -71,3 +71,11 @@ WHERE username = $1 AND is_delete = false LIMIT 1;
 -- name: GetUserByID :one
 select id, username, "name", email, avatar, bio, role from users
 where is_delete = false and id = $1;
+
+-- name: GetProfile :one
+SELECT u.id, u."name", u.username, u.email, u.avatar, u.bio, u.role,
+    (SELECT COUNT(*) FROM follows WHERE following_id = u.id) AS followers_count,
+    (SELECT COUNT(*) FROM follows WHERE follower_id = u.id) AS following_count,
+    (SELECT COUNT(*) FROM posts p INNER JOIN composes c ON p.id = c.post_id WHERE c.user_id = u.id AND p.status = 2) AS posts_count
+FROM users u
+WHERE u.is_delete = false AND u.role = 'user' AND u.id = $1;

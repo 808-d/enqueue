@@ -93,6 +93,46 @@ func (q *Queries) DeleteUser(ctx context.Context, id pgtype.UUID) error {
 	return err
 }
 
+const getProfile = `-- name: GetProfile :one
+SELECT u.id, u."name", u.username, u.email, u.avatar, u.bio, u.role,
+    (SELECT COUNT(*) FROM follows WHERE following_id = u.id) AS followers_count,
+    (SELECT COUNT(*) FROM follows WHERE follower_id = u.id) AS following_count,
+    (SELECT COUNT(*) FROM posts p INNER JOIN composes c ON p.id = c.post_id WHERE c.user_id = u.id AND p.status = 2) AS posts_count
+FROM users u
+WHERE u.is_delete = false AND u.role = 'user' AND u.id = $1
+`
+
+type GetProfileRow struct {
+	ID             pgtype.UUID `json:"id"`
+	Name           pgtype.Text `json:"name"`
+	Username       string      `json:"username"`
+	Email          string      `json:"email"`
+	Avatar         pgtype.Text `json:"avatar"`
+	Bio            pgtype.Text `json:"bio"`
+	Role           string      `json:"role"`
+	FollowersCount int64       `json:"followersCount"`
+	FollowingCount int64       `json:"followingCount"`
+	PostsCount     int64       `json:"postsCount"`
+}
+
+func (q *Queries) GetProfile(ctx context.Context, id pgtype.UUID) (GetProfileRow, error) {
+	row := q.db.QueryRow(ctx, getProfile, id)
+	var i GetProfileRow
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Username,
+		&i.Email,
+		&i.Avatar,
+		&i.Bio,
+		&i.Role,
+		&i.FollowersCount,
+		&i.FollowingCount,
+		&i.PostsCount,
+	)
+	return i, err
+}
+
 const getUser = `-- name: GetUser :one
 SELECT is_delete, create_time, update_time, id, username, email, avatar, password, role, email_verified, bio, name, pending_email FROM users WHERE id = $1 AND is_delete = false LIMIT 1
 `

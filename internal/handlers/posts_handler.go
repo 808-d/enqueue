@@ -212,7 +212,7 @@ func (h *PostsHandler) GetPostById(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := posts.PostResponse{
-		Post:     posts.NewPostDTO(post),
+		Post:     posts.NewPostDTO(*post),
 		Comments: comments,
 	}
 
